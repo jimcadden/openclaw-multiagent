@@ -14,7 +14,7 @@ This skill provides the complete workflow for creating a new OpenClaw agent in a
 All new agents are created in `~/workspaces/` with shared skills and a standard template.
 
 ```
-~/agent-workspace/
+~/workspaces/
 ├── main/                   # Existing agents...
 ├── research/
 └── your-new-agent/         ← Created from workspace.template
@@ -32,7 +32,7 @@ All new agents are created in `~/workspaces/` with shared skills and a standard 
 Run the interactive setup:
 
 ```bash
-python3 ~/agent-workspace/kit/skills/multiagent-telegram-setup/scripts/setup-telegram-agent.py
+python3 ~/workspaces/kit/skills/multiagent-telegram-setup/scripts/setup-telegram-agent.py
 ```
 
 This will:
@@ -142,7 +142,7 @@ This routes messages from the `research_bot` Telegram account to the `research` 
 ### Step 4: Create Workspace
 
 ```bash
-cd ~/agent-workspace
+cd ~/workspaces
 cp -r workspace.template your-agent-name
 ```
 

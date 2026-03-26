@@ -4,7 +4,7 @@ One-time bootstrap for OpenClaw multi-agent workspace.
 
 ## Purpose
 
-Sets up the initial `~/agent-workspace/` directory structure, creates the first agent from template, and wires everything into OpenClaw's config.
+Sets up the initial `~/workspaces/` directory structure, creates the first agent from template, and wires everything into OpenClaw's config.
 
 ## When to Run
 
@@ -37,13 +37,13 @@ Or if running standalone:
 ## Prerequisites
 
 - OpenClaw installed (`openclaw` CLI available)
-- This repo cloned as submodule at `~/agent-workspace/kit/`
-- Git initialized in `~/agent-workspace/`
+- This repo cloned as submodule at `~/workspaces/kit/`
+- Git initialized in `~/workspaces/`
 
 ## Files Created
 
 ```
-~/agent-workspace/
+~/workspaces/
 ├── kit/                       # this submodule (unchanged)
 ├── shared/
 │   └── skills/

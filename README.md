@@ -6,18 +6,24 @@ Multi-agent workspace toolkit for OpenClaw. Distributed via Git submodules.
 
 A collection of skills and templates for running multiple OpenClaw agents with shared state management, git tracking, and easy Telegram setup.
 
-## Quick Start
+## When to Use This
+
+**Bootstrap is for fresh OpenClaw installs.** Run it once after installing OpenClaw and before creating any agents.
+
+**Already have OpenClaw set up?** Skip bootstrap — just add this repo as a submodule to your existing workspace and repoint your skill symlinks.
+
+## Quick Start (New Install)
 
 ```bash
 # 1. Create your workspace
-mkdir -p ~/agent-workspace
-cd ~/agent-workspace
+mkdir -p ~/workspaces
+cd ~/workspaces
 git init
 
 # 2. Add this repo as a submodule
 git submodule add https://github.com/jimcadden/openclaw-multiagent.git kit
 
-# 3. Run bootstrap
+# 3. Run bootstrap (one-time setup)
 ./kit/skills/multiagent-bootstrap/scripts/setup.sh
 
 # 4. Restart OpenClaw
@@ -48,7 +54,7 @@ cp -r kit/workspace-template my-new-agent
 ## Updating the Kit
 
 ```bash
-cd ~/agent-workspace/kit
+cd ~/workspaces/kit
 git pull
 cd ..
 git add kit

@@ -7,7 +7,7 @@
 if [ -n "$WORKSPACE_DIR" ]; then
     DETECTED_WORKSPACE="$WORKSPACE_DIR"
 else
-    DETECTED_WORKSPACE=$(git rev-parse --show-toplevel 2>/dev/null || echo "/home/claw/agent-workspace")
+    DETECTED_WORKSPACE=$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/workspaces")
 fi
 
 cd "$DETECTED_WORKSPACE" || exit 1

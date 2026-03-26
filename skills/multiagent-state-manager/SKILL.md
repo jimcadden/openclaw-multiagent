@@ -110,13 +110,13 @@ Pushes to `origin/main` by default. Customize:
 
 ## Multi-Agent Workspace Support
 
-This skill automatically detects if you're in a **multi-agent workspace** (e.g., `~/agent-workspace/` with subdirs like `main/`, `research/`, `shared/`).
+This skill automatically detects if you're in a **multi-agent workspace** (e.g., `~/workspaces/` with subdirs like `main/`, `research/`, `shared/`).
 
 ### For Multi-Agent Workspaces
 
 **Commit from any agent directory:**
 ```bash
-cd ~/agent-workspace/main
+cd ~/workspaces/main
 ./scripts/commit_workspace.sh
 # Result: [main] Auto-generated message...
 
@@ -178,17 +178,17 @@ cd /root/.openclaw/workspace
 
 **Multi-agent:**
 ```bash
-cd ~/agent-workspace
+cd ~/workspaces
 # Initialize once at root
 git init
 ```
 
 Then set remote:
 ```bash
-git remote add origin git@github.com:<user>/agent-workspace.git
+git remote add origin git@github.com:<user>/workspaces.git
 ```
 
 Or via HTTPS:
 ```bash
-git remote add origin https://github.com/<user>/agent-workspace.git
+git remote add origin https://github.com/<user>/workspaces.git
 ```

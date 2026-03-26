@@ -19,7 +19,7 @@ CONFIG_PATH = Path.home() / ".openclaw" / "openclaw.json"
 AGENTS_DIR = Path.home() / ".openclaw" / "agents"
 
 # Detect if running in multi-agent workspace mode
-MULTI_AGENT_WORKSPACE = Path.home() / "agent-workspace"
+MULTI_AGENT_WORKSPACE = Path.home() / "workspaces"
 WORKSPACE_TEMPLATE = MULTI_AGENT_WORKSPACE / "workspace.template"
 IS_MULTI_AGENT = MULTI_AGENT_WORKSPACE.exists() and WORKSPACE_TEMPLATE.exists()
 
@@ -116,7 +116,7 @@ def step_agent_config(bot_token):
     
     # Workspace and agent directory
     if IS_MULTI_AGENT:
-        # Multi-agent: workspace is a subdirectory of agent-workspace
+        # Multi-agent: workspace is a subdirectory of workspaces
         workspace_default = str(WORKSPACE_BASE / agent_id)
     else:
         # Single-agent: workspace in .openclaw
@@ -298,8 +298,11 @@ You'll need:
 ⚠️  Legacy single-agent mode detected.
 
 Consider migrating to multi-agent workspace:
-  mkdir ~/agent-workspace
-  cp -r workspace.template ~/agent-workspace/
+  mkdir ~/workspaces
+  cd ~/workspaces
+  git init
+  git submodule add https://github.com/jimcadden/openclaw-multiagent.git kit
+  ./kit/skills/multiagent-bootstrap/scripts/setup.sh
 
 This script will create a basic single-agent workspace.
 """)
