@@ -49,17 +49,13 @@ fi
 # Check shared skills
 echo
 echo "Checking shared skills..."
-if [ -L "$WORKSPACE_DIR/shared/skills/multiagent-state-manager" ]; then
-    check_pass "multiagent-state-manager symlink exists"
-else
-    check_fail "multiagent-state-manager symlink missing"
-fi
-
-if [ -L "$WORKSPACE_DIR/shared/skills/multiagent-telegram-setup" ]; then
-    check_pass "multiagent-telegram-setup symlink exists"
-else
-    check_fail "multiagent-telegram-setup symlink missing"
-fi
+for skill in multiagent-state-manager multiagent-telegram-setup multiagent-kit-guide; do
+    if [ -L "$WORKSPACE_DIR/shared/skills/$skill" ]; then
+        check_pass "$skill symlink exists"
+    else
+        check_fail "$skill symlink missing"
+    fi
+done
 
 # Check agents
 echo
@@ -71,8 +67,9 @@ for dir in "$WORKSPACE_DIR"/*/; do
         ((agent_count++))
         
         missing=0
-        [ -L "$dir/multiagent-state-manager" ] || ((missing++))
-        [ -L "$dir/multiagent-telegram-setup" ] || ((missing++))
+        for skill in multiagent-state-manager multiagent-telegram-setup multiagent-kit-guide; do
+            [ -L "$dir/$skill" ] || missing=$((missing + 1))
+        done
         
         if [ $missing -eq 0 ]; then
             check_pass "$agent_name"

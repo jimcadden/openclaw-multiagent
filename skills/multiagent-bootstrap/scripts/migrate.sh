@@ -239,8 +239,9 @@ setup_shared_skills() {
 
     if $DRY_RUN; then
         log_dry "Would create: $WORKSPACE_DIR/shared/skills/"
-        log_dry "Would symlink: shared/skills/multiagent-state-manager -> ../../kit/skills/multiagent-state-manager"
-        log_dry "Would symlink: shared/skills/multiagent-telegram-setup -> ../../kit/skills/multiagent-telegram-setup"
+        for skill in multiagent-state-manager multiagent-telegram-setup multiagent-kit-guide; do
+            log_dry "Would symlink: shared/skills/$skill -> ../../kit/skills/$skill"
+        done
         return 0
     fi
 
@@ -253,7 +254,7 @@ setup_shared_skills() {
     done
 
     # Remove and recreate to ensure correct target
-    for skill in multiagent-state-manager multiagent-telegram-setup; do
+    for skill in multiagent-state-manager multiagent-telegram-setup multiagent-kit-guide; do
         [ -L "$skill" ] && rm -f "$skill"
         ln -s "../../kit/skills/$skill" "$skill"
         log_success "Linked shared/skills/$skill"
@@ -272,8 +273,9 @@ setup_agent_symlinks() {
 
     if $DRY_RUN; then
         log_dry "  Would clean up legacy symlinks in $agent_dir"
-        log_dry "  Would symlink: $agent_name/multiagent-state-manager -> ../shared/skills/multiagent-state-manager"
-        log_dry "  Would symlink: $agent_name/multiagent-telegram-setup -> ../shared/skills/multiagent-telegram-setup"
+        for skill in multiagent-state-manager multiagent-telegram-setup multiagent-kit-guide; do
+            log_dry "  Would symlink: $agent_name/$skill -> ../shared/skills/$skill"
+        done
         return 0
     fi
 
@@ -284,7 +286,7 @@ setup_agent_symlinks() {
         [ -L "$old" ] && rm -f "$old" && log_success "  Removed legacy symlink: $old"
     done
 
-    for skill in multiagent-state-manager multiagent-telegram-setup; do
+    for skill in multiagent-state-manager multiagent-telegram-setup multiagent-kit-guide; do
         [ -L "$skill" ] && rm -f "$skill"
         # Route through shared/ (consistent with fresh install layout)
         ln -s "../shared/skills/$skill" "$skill"

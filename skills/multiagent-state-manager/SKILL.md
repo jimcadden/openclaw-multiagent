@@ -110,39 +110,27 @@ Pushes to `origin/main` by default. Customize:
 
 ## Multi-Agent Workspace Support
 
-This skill automatically detects if you're in a **multi-agent workspace** (e.g., `~/workspaces/` with subdirs like `main/`, `research/`, `shared/`).
+This skill automatically detects if you're in a **multi-agent workspace** (a workspace root containing `shared/skills/` alongside individual agent directories).
 
 ### For Multi-Agent Workspaces
 
 **Commit from any agent directory:**
 ```bash
-cd ~/workspaces/main
-./scripts/commit_workspace.sh
-# Result: [main] Auto-generated message...
-
-cd ../research
-./scripts/commit_workspace.sh
-# Result: [research] Auto-generated message...
+cd <workspace>/<agent-name>
+./multiagent-state-manager/scripts/commit_workspace.sh
+# Result: [<agent-name>] Auto-generated message...
 ```
 
-**Status shows agent name:**
-```
-╔════════════════════════════════════════════════════════════╗
-║  🤖 Agent: main                                     ║
-╠════════════════════════════════════════════════════════════╣
-║  📝 Uncommitted changes:                           ║
-...
-```
+The agent name is derived automatically from the current directory name.
 
 ### Directory Structure
 
 ```
-~/workspaces/
-├── main/                   # main agent workspace
-├── research/               # research agent workspace
-├── shared/                  # shared resources (main writes, others read)
-│   └── skills/
-└── .git                   # root git repo
+<workspace>/
+├── <agent-name>/           # your agent workspace
+├── shared/
+│   └── skills/             # shared skill symlinks
+└── .git                    # root git repo
 ```
 
 ## Commit Message Format
@@ -168,27 +156,11 @@ This tracks which system version and model created each checkpoint.
 
 ## First-Time Setup
 
-On first run, `commit_workspace.sh` auto-initializes git repo.
+The workspace git repo is initialized by `install.sh` or `migrate.sh`. To add a remote for push/pull:
 
-**Single agent:**
 ```bash
-cd /root/.openclaw/workspace
-./scripts/commit_workspace.sh
-```
-
-**Multi-agent:**
-```bash
-cd ~/workspaces
-# Initialize once at root
-git init
-```
-
-Then set remote:
-```bash
+cd <workspace>
 git remote add origin git@github.com:<user>/workspaces.git
-```
-
-Or via HTTPS:
-```bash
+# or via HTTPS:
 git remote add origin https://github.com/<user>/workspaces.git
 ```

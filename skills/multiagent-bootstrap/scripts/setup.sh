@@ -144,23 +144,21 @@ setup_shared() {
     
     if $DRY_RUN; then
         log_dry "Would create: $WORKSPACE_DIR/shared/skills"
-        log_dry "Would symlink: $WORKSPACE_DIR/shared/skills/multiagent-state-manager -> $KIT_DIR/skills/multiagent-state-manager"
-        log_dry "Would symlink: $WORKSPACE_DIR/shared/skills/multiagent-telegram-setup -> $KIT_DIR/skills/multiagent-telegram-setup"
+        for skill in multiagent-state-manager multiagent-telegram-setup multiagent-kit-guide; do
+            log_dry "Would symlink: $WORKSPACE_DIR/shared/skills/$skill -> $KIT_DIR/skills/$skill"
+        done
         return 0
     fi
     
     mkdir -p "$WORKSPACE_DIR/shared/skills"
     
     # Symlink shared skills
-    if [ ! -L "$WORKSPACE_DIR/shared/skills/multiagent-state-manager" ]; then
-        ln -s "$KIT_DIR/skills/multiagent-state-manager" "$WORKSPACE_DIR/shared/skills/multiagent-state-manager"
-        log_success "Linked multiagent-state-manager"
-    fi
-    
-    if [ ! -L "$WORKSPACE_DIR/shared/skills/multiagent-telegram-setup" ]; then
-        ln -s "$KIT_DIR/skills/multiagent-telegram-setup" "$WORKSPACE_DIR/shared/skills/multiagent-telegram-setup"
-        log_success "Linked multiagent-telegram-setup"
-    fi
+    for skill in multiagent-state-manager multiagent-telegram-setup multiagent-kit-guide; do
+        if [ ! -L "$WORKSPACE_DIR/shared/skills/$skill" ]; then
+            ln -s "$KIT_DIR/skills/$skill" "$WORKSPACE_DIR/shared/skills/$skill"
+            log_success "Linked $skill"
+        fi
+    done
 }
 
 # Get agent name from user or use default
@@ -198,16 +196,18 @@ create_agent() {
     
     if $DRY_RUN; then
         log_dry "Would copy: $KIT_DIR/workspace-template -> $WORKSPACE_DIR/$AGENT_NAME"
-        log_dry "Would symlink: $WORKSPACE_DIR/$AGENT_NAME/multiagent-state-manager -> ../shared/skills/multiagent-state-manager"
-        log_dry "Would symlink: $WORKSPACE_DIR/$AGENT_NAME/multiagent-telegram-setup -> ../shared/skills/multiagent-telegram-setup"
+        for skill in multiagent-state-manager multiagent-telegram-setup multiagent-kit-guide; do
+            log_dry "Would symlink: $WORKSPACE_DIR/$AGENT_NAME/$skill -> ../shared/skills/$skill"
+        done
         return 0
     fi
     
     cp -r "$KIT_DIR/workspace-template" "$WORKSPACE_DIR/$AGENT_NAME"
     
     # Symlink shared skills into agent directory
-    ln -s "../shared/skills/multiagent-state-manager" "$WORKSPACE_DIR/$AGENT_NAME/multiagent-state-manager"
-    ln -s "../shared/skills/multiagent-telegram-setup" "$WORKSPACE_DIR/$AGENT_NAME/multiagent-telegram-setup"
+    for skill in multiagent-state-manager multiagent-telegram-setup multiagent-kit-guide; do
+        ln -s "../shared/skills/$skill" "$WORKSPACE_DIR/$AGENT_NAME/$skill"
+    done
     
     log_success "Agent workspace created at $WORKSPACE_DIR/$AGENT_NAME"
 }

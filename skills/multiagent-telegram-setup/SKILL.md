@@ -11,28 +11,28 @@ This skill provides the complete workflow for creating a new OpenClaw agent in a
 
 ## Default: Multi-Agent Workspace
 
-All new agents are created in `~/workspaces/` with shared skills and a standard template.
+All new agents are created in the workspace root with shared skills and a standard template.
 
 ```
-~/workspaces/
+<workspace>/
 ├── main/                   # Existing agents...
-├── research/
-└── your-new-agent/         ← Created from workspace.template
-    ├── AGENTS.md
-    ├── IDENTITY.md         # Customize this
-    ├── MEMORY.md           # Customize this
-    ├── SOUL.md
-    ├── TOOLS.md            # Customize this
-    ├── USER.md             # Customize this
-    └── multiagent-state-manager -> ../shared/skills/multiagent-state-manager
+├── <new-agent>/            ← Created from kit/workspace-template
+│   ├── AGENTS.md
+│   ├── IDENTITY.md         # Customize this
+│   ├── MEMORY.md           # Customize this
+│   ├── SOUL.md
+│   ├── TOOLS.md            # Customize this
+│   ├── USER.md             # Customize this
+│   └── multiagent-state-manager -> ../shared/skills/multiagent-state-manager
+└── shared/
 ```
 
 ## Quick Start
 
-Run the interactive setup:
+Run the interactive setup from your workspace root:
 
 ```bash
-python3 ~/workspaces/kit/skills/multiagent-telegram-setup/scripts/setup-telegram-agent.py
+python3 ./kit/skills/multiagent-telegram-setup/scripts/setup-telegram-agent.py
 ```
 
 This will:
@@ -62,10 +62,10 @@ Decide on these values:
 |-------|---------|-------|
 | `agentId` | `research` | Lowercase, hyphens OK |
 | `agentName` | `research` | Display name (optional) |
-| `workspace` | `/root/.openclaw/workspace.research` | Agent's workspace directory |
-| `agentDir` | `/root/.openclaw/agents/research` | Agent configuration directory |
+| `workspace` | `<workspace>/research` | Agent's workspace directory |
+| `agentDir` | `<openclaw-dir>/agents/research` | Agent configuration directory |
 | `accountId` | `research_bot` | Telegram account identifier |
-| `model` | `rits-qwen3.5/Qwen/Qwen3.5-397B-A17B-FP8` | Primary model for this agent |
+| `model` | _(your preferred model)_ | Primary model for this agent |
 
 ### Step 3: Edit openclaw.json
 
@@ -82,8 +82,8 @@ Open `~/.openclaw/openclaw.json` and add three sections:
     {
       "id": "research",
       "name": "research",
-      "workspace": "/root/.openclaw/workspace.research",
-      "agentDir": "/root/.openclaw/agents/research"
+      "workspace": "<workspace>/research",
+      "agentDir": "<openclaw-dir>/agents/research"
     }
   ]
 }
@@ -96,18 +96,17 @@ Open `~/.openclaw/openclaw.json` and add three sections:
   "telegram": {
     "accounts": {
       "default": {
-        "name": "jimclaw",
         "dmPolicy": "allowlist",
-        "botToken": "__REDACTED__",
-        "allowFrom": [YOUR_TELEGRAM_USER_ID],
+        "botToken": "<your-main-bot-token>",
+        "allowFrom": [<your-telegram-user-id>],
         "groupPolicy": "allowlist",
         "streaming": "off"
       },
       "research_bot": {
         "enabled": true,
         "dmPolicy": "pairing",
-        "botToken": "123456789:ABCdefGHIjklMNOpqrsTUVwxyz",
-        "allowFrom": [YOUR_TELEGRAM_USER_ID],
+        "botToken": "<your-research-bot-token>",
+        "allowFrom": [<your-telegram-user-id>],
         "groupPolicy": "allowlist",
         "streaming": "partial"
       }
@@ -141,9 +140,18 @@ This routes messages from the `research_bot` Telegram account to the `research` 
 
 ### Step 4: Create Workspace
 
+Use `add-agent.sh` to create the workspace from the kit template (recommended):
+
 ```bash
-cd ~/workspaces
-cp -r workspace.template your-agent-name
+cd <workspace>
+./kit/scripts/add-agent.sh your-agent-name
+```
+
+Or manually:
+
+```bash
+cd <workspace>
+cp -r kit/workspace-template your-agent-name
 ```
 
 The workspace holds the agent's files (IDENTITY.md, MEMORY.md, SOUL.md, etc.).
@@ -153,7 +161,7 @@ The workspace holds the agent's files (IDENTITY.md, MEMORY.md, SOUL.md, etc.).
 Commit the new workspace to version control:
 
 ```bash
-cd ~/workspaces
+cd <workspace>
 git add your-agent-name/
 git commit -m "[main] Add your-agent-name agent workspace"
 git push origin main
@@ -285,4 +293,3 @@ Each bot routes to a different agent:
 - **allowFrom** restricts who can message your bot — use it
 - **groupPolicy: allowlist** prevents bot from joining random groups
 - Don't commit `openclaw.json` with real tokens to version control
-rol

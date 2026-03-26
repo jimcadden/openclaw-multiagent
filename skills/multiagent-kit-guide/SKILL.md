@@ -11,75 +11,79 @@ Quick reference for working with the `openclaw-multiagent` kit.
 
 ### Update Kit to New Version
 
+Use the interactive updater (recommended):
+
 ```bash
-cd ~/workspaces/kit
+./multiagent-kit-guide/scripts/update-kit.sh
+```
+
+Or manually:
+
+```bash
+cd kit
 git fetch
-git checkout v0.2.0  # or latest tag
+LATEST=$(git describe --tags --abbrev=0 $(git rev-list --tags --max-count=1))
+git checkout "$LATEST"
 cd ..
 git add kit
-git commit -m "[main] Update kit to v0.2.0"
+git commit -m "[main] Update kit to $LATEST"
 ```
 
 ### Check Kit Status
 
 ```bash
-cd ~/workspaces/kit
-git status          # See if you're on a tag or branch
-git describe --tags # Show current version
+cd kit
+git status           # See if you're on a tag or branch
+git describe --tags  # Show current version
 git log --oneline -5 # Recent kit commits
 ```
 
-### Reset Kit to Clean State
+### Reset Kit to a Specific Version
 
 ```bash
-cd ~/workspaces/kit
-git reset --hard v0.1.0  # or whatever version you want
+cd kit
+git reset --hard <version-tag>
 cd ..
 git add kit
-git commit -m "[main] Reset kit to v0.1.0"
+git commit -m "[main] Reset kit to <version-tag>"
 ```
 
 ## Adding a New Agent
 
-### Option 1: Copy Template (Manual)
+### Option 1: Use add-agent.sh (Recommended)
 
 ```bash
-cd ~/workspaces
+cd <workspace>
+./kit/scripts/add-agent.sh my-new-agent
+```
+
+This handles template copy, skill symlinks, config update, and git commit.
+
+### Option 2: Copy Template (Manual)
+
+```bash
+cd <workspace>
 cp -r kit/workspace-template my-new-agent
 
 # Edit the files
 cd my-new-agent
-vim IDENTITY.md    # Agent name, emoji, vibe
-vim USER.md        # Your info
-vim TOOLS.md       # Any local tool notes
+# Edit IDENTITY.md, USER.md, TOOLS.md
 
-# Add symlinks to kit skills
-ln -s ../kit/skills/multiagent-state-manager multiagent-state-manager
-ln -s ../kit/skills/multiagent-telegram-setup multiagent-telegram-setup
-```
-
-### Option 2: Use Bootstrap (Fresh Install Only)
-
-If you want a second workspace (not recommended for existing setups):
-
-```bash
-mkdir ~/workspaces-v2
-cd ~/workspaces-v2
-git init
-git submodule add https://github.com/jimcadden/openclaw-multiagent.git kit
-cd kit && git checkout v0.1.0 && cd ..
-./kit/skills/multiagent-bootstrap/scripts/setup.sh my-new-agent
+# Add symlinks through shared/
+ln -s ../shared/skills/multiagent-state-manager multiagent-state-manager
+ln -s ../shared/skills/multiagent-telegram-setup multiagent-telegram-setup
+ln -s ../shared/skills/multiagent-kit-guide multiagent-kit-guide
 ```
 
 ### Register in OpenClaw
 
-Edit `~/.openclaw/openclaw.json`:
+Edit `<openclaw-dir>/openclaw.json`:
 
 ```json
 "agents": {
   "list": [
-    { "id": "main", "workspace": "/home/user/workspaces/main" },
-    { "id": "my-new-agent", "workspace": "/home/user/workspaces/my-new-agent" }
+    { "id": "main", "workspace": "<workspace>/main" },
+    { "id": "my-new-agent", "workspace": "<workspace>/my-new-agent" }
   ]
 }
 ```
@@ -93,15 +97,15 @@ Then restart: `openclaw gateway restart`
 **Problem:** `kit/` directory is empty or has errors
 
 ```bash
-cd ~/workspaces
+cd <workspace>
 git submodule update --init --recursive
 ```
 
 **Problem:** Kit is on a branch instead of a tag
 
 ```bash
-cd ~/workspaces/kit
-git checkout v0.1.0  # Pin to stable release
+cd kit
+git checkout <version-tag>  # Pin to stable release
 ```
 
 ### Symlink Issues
@@ -109,19 +113,20 @@ git checkout v0.1.0  # Pin to stable release
 **Problem:** Skills not found, broken symlinks
 
 ```bash
-cd ~/workspaces/main
+cd <workspace>/<agent-name>
 ls -la multiagent-*  # Check if symlinks resolve
 
-# If broken, recreate:
-rm -f multiagent-state-manager multiagent-telegram-setup
-ln -s ../kit/skills/multiagent-state-manager multiagent-state-manager
-ln -s ../kit/skills/multiagent-telegram-setup multiagent-telegram-setup
+# If broken, recreate (routes through shared/):
+rm -f multiagent-state-manager multiagent-telegram-setup multiagent-kit-guide
+ln -s ../shared/skills/multiagent-state-manager multiagent-state-manager
+ln -s ../shared/skills/multiagent-telegram-setup multiagent-telegram-setup
+ln -s ../shared/skills/multiagent-kit-guide multiagent-kit-guide
 ```
 
 **Problem:** Permission denied on scripts
 
 ```bash
-chmod +x ~/workspaces/kit/skills/*/scripts/*.sh
+chmod +x <workspace>/kit/skills/*/scripts/*.sh
 ```
 
 ### Kit Update Conflicts
@@ -129,13 +134,13 @@ chmod +x ~/workspaces/kit/skills/*/scripts/*.sh
 **Problem:** Local changes in kit directory
 
 ```bash
-cd ~/workspaces/kit
+cd kit
 # Option 1: Discard local changes
-git reset --hard v0.1.0
+git reset --hard <version-tag>
 
 # Option 2: Stash and reapply
 git stash
-git checkout v0.2.0
+git checkout <newer-version-tag>
 git stash pop  # May have conflicts to resolve
 ```
 
@@ -146,7 +151,7 @@ git stash pop  # May have conflicts to resolve
 1. **Fork the repo** on GitHub
 2. **Clone your fork** as the submodule:
    ```bash
-   cd ~/workspaces
+   cd <workspace>
    rm -rf kit
    git submodule add https://github.com/YOURNAME/openclaw-multiagent.git kit
    cd kit && git checkout -b my-feature
@@ -160,26 +165,23 @@ git stash pop  # May have conflicts to resolve
 For maintainers:
 
 ```bash
-# 1. Update version references in docs
-vim README.md  # Update any version strings
-
-# 2. Commit changes
+# 1. Commit changes
 git add -A
-git commit -m "[main] Prepare v0.2.0"
+git commit -m "Prepare <version>"
 
-# 3. Tag release
-git tag -a v0.2.0 -m "Release v0.2.0 - Description"
+# 2. Tag release
+git tag -a <version> -m "Release <version> - Description"
 git push origin main
-git push origin v0.2.0
+git push origin <version>
 
-# 4. Users can now update:
-# cd ~/workspaces/kit && git fetch && git checkout v0.2.0
+# 3. Users update via:
+# ./multiagent-kit-guide/scripts/update-kit.sh
 ```
 
 ## Directory Reference
 
 ```
-~/workspaces/
+<workspace>/
 ├── kit/                           # SUBMODULE - don't edit directly
 │   ├── skills/
 │   │   ├── multiagent-bootstrap/
@@ -187,15 +189,17 @@ git push origin v0.2.0
 │   │   ├── multiagent-telegram-setup/
 │   │   └── multiagent-kit-guide/  # ← You are here
 │   └── workspace-template/
-├── shared/skills/                 # SYMLINKS to kit
-│   ├── multiagent-state-manager -> ../../kit/...
-│   └── multiagent-telegram-setup -> ../../kit/...
-└── main/                          # YOUR AGENT
+├── shared/skills/                 # SYMLINKS to kit (single source of truth)
+│   ├── multiagent-state-manager  -> ../../kit/skills/multiagent-state-manager
+│   ├── multiagent-telegram-setup -> ../../kit/skills/multiagent-telegram-setup
+│   └── multiagent-kit-guide      -> ../../kit/skills/multiagent-kit-guide
+└── <agent-name>/                  # YOUR AGENT
     ├── IDENTITY.md                # ← Edit this
     ├── USER.md                    # ← Edit this
     ├── MEMORY.md                  # ← Edit this
-    ├── multiagent-state-manager -> ../kit/...
-    └── multiagent-telegram-setup -> ../kit/...
+    ├── multiagent-state-manager  -> ../shared/skills/multiagent-state-manager
+    ├── multiagent-telegram-setup -> ../shared/skills/multiagent-telegram-setup
+    └── multiagent-kit-guide      -> ../shared/skills/multiagent-kit-guide
 ```
 
 ## Best Practices

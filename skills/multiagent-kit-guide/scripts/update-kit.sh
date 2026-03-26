@@ -7,7 +7,7 @@
 
 set -e
 
-WORKSPACE_DIR="${WORKSPACE_DIR:-$HOME/workspaces}"
+WORKSPACE_DIR="${WORKSPACE_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/.openclaw/workspace")}"
 KIT_DIR="$WORKSPACE_DIR/kit"
 
 echo "╔════════════════════════════════════════════════════════╗"

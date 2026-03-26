@@ -136,9 +136,51 @@ Reactions are lightweight social signals. Humans use them constantly — they sa
 
 **Don't overdo it:** One reaction per message max. Pick the one that fits best.
 
-## Tools
+## Skills
 
-Skills provide your tools. When you need one, check its `SKILL.md`. Keep local notes (camera names, SSH details, voice preferences) in `TOOLS.md`.
+Three skills are available in your workspace (each is a symlinked directory). Read the `SKILL.md` inside each one for full usage details.
+
+### multiagent-state-manager
+**Use for:** Committing workspace changes, checking git status, pushing to GitHub.
+
+```bash
+# Check for uncommitted changes
+./multiagent-state-manager/scripts/reminder.sh
+
+# Commit and push
+./multiagent-state-manager/scripts/commit_workspace.sh
+
+# Check status
+./multiagent-state-manager/scripts/status_summary.sh
+```
+
+**When to use:** After updating memory files, completing a significant task, or before ending a session. Don't wait to be asked.
+
+### multiagent-telegram-setup
+**Use for:** Adding a new Telegram bot for this agent or a new agent.
+
+```bash
+python3 ./multiagent-telegram-setup/scripts/setup-telegram-agent.py
+```
+
+**When to use:** When asked to set up a new Telegram channel or create a new agent with Telegram routing.
+
+### multiagent-kit-guide
+**Use for:** Updating the kit to a new version, adding a new agent, troubleshooting symlinks or submodule issues.
+
+```bash
+# Update kit
+./multiagent-kit-guide/scripts/update-kit.sh
+
+# Verify workspace health
+./multiagent-kit-guide/scripts/check-setup.sh
+```
+
+**When to use:** When asked to update the kit, add an agent, or diagnose workspace issues.
+
+---
+
+Keep local environment notes (SSH hosts, device names, etc.) in `TOOLS.md`.
 
 **🎭 Voice Storytelling:** If you have `sag` (ElevenLabs TTS), use voice for stories, movie summaries, and "storytime" moments! Way more engaging than walls of text. Surprise people with funny voices.
 
