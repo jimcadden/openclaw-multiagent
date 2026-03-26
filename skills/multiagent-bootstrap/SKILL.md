@@ -101,23 +101,22 @@ cd ~/workspaces
 # 1. Add the kit as a submodule
 git submodule add https://github.com/jimcadden/openclaw-multiagent.git kit
 
-# 2. Update agent skill symlinks (repeat for each agent)
-cd main
-rm -f agent-state-manager telegram-agent-setup
-ln -s ../kit/skills/multiagent-state-manager multiagent-state-manager
-ln -s ../kit/skills/multiagent-telegram-setup multiagent-telegram-setup
-cd ..
-
-# 3. Update shared skill symlinks
+# 2. Create shared skills directory with symlinks
+mkdir -p shared/skills
 cd shared/skills
-rm -f agent-state-manager telegram-agent-setup
 ln -s ../../kit/skills/multiagent-state-manager multiagent-state-manager
 ln -s ../../kit/skills/multiagent-telegram-setup multiagent-telegram-setup
 cd ../..
 
+# 3. Add skill symlinks to each agent (repeat for each agent)
+cd main
+ln -s ../kit/skills/multiagent-state-manager multiagent-state-manager
+ln -s ../kit/skills/multiagent-telegram-setup multiagent-telegram-setup
+cd ..
+
 # 4. Commit the changes
 git add -A
-git commit -m "[main] Migrate to openclaw-multiagent kit"
+git commit -m "[main] Add openclaw-multiagent kit"
 ```
 
 ## Post-Bootstrap / Post-Migration

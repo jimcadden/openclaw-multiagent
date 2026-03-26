@@ -79,18 +79,15 @@ check_prereqs() {
     log_success "Prerequisites OK"
 }
 
-# Migrate agent symlinks
-migrate_agent() {
+# Setup agent symlinks
+setup_agent_symlinks() {
     local agent_name="$1"
     local agent_dir="$WORKSPACE_DIR/$agent_name"
     
-    log_info "Migrating agent: $agent_name"
+    log_info "Setting up agent: $agent_name"
     
     if $DRY_RUN; then
-        log_dry "Would remove old symlinks in $agent_dir:"
-        log_dry "  - agent-state-manager (if exists)"
-        log_dry "  - telegram-agent-setup (if exists)"
-        log_dry "Would create new symlinks:"
+        log_dry "Would create/replace symlinks in $agent_dir:"
         log_dry "  - multiagent-state-manager -> ../kit/skills/multiagent-state-manager"
         log_dry "  - multiagent-telegram-setup -> ../kit/skills/multiagent-telegram-setup"
         return 0
@@ -98,18 +95,7 @@ migrate_agent() {
     
     cd "$agent_dir"
     
-    # Remove old symlinks (if they exist)
-    if [ -L "agent-state-manager" ]; then
-        rm -f agent-state-manager
-        log_success "Removed old symlink: agent-state-manager"
-    fi
-    
-    if [ -L "telegram-agent-setup" ]; then
-        rm -f telegram-agent-setup
-        log_success "Removed old symlink: telegram-agent-setup"
-    fi
-    
-    # Remove any stale symlinks
+    # Remove any existing symlinks (clean slate)
     if [ -L "multiagent-state-manager" ]; then
         rm -f multiagent-state-manager
     fi
@@ -122,19 +108,16 @@ migrate_agent() {
     ln -s "../kit/skills/multiagent-state-manager" multiagent-state-manager
     ln -s "../kit/skills/multiagent-telegram-setup" multiagent-telegram-setup
     
-    log_success "Updated symlinks for $agent_name"
+    log_success "Symlinks created for $agent_name"
 }
 
-# Migrate shared skills
-migrate_shared() {
-    log_info "Migrating shared skills..."
+# Setup shared skills directory
+setup_shared_skills() {
+    log_info "Setting up shared skills..."
     
     if $DRY_RUN; then
         log_dry "Would create: $WORKSPACE_DIR/shared/skills/"
-        log_dry "Would remove old symlinks (if exist):"
-        log_dry "  - agent-state-manager"
-        log_dry "  - telegram-agent-setup"
-        log_dry "Would create new symlinks:"
+        log_dry "Would create symlinks:"
         log_dry "  - multiagent-state-manager -> ../../kit/skills/multiagent-state-manager"
         log_dry "  - multiagent-telegram-setup -> ../../kit/skills/multiagent-telegram-setup"
         return 0
@@ -143,18 +126,7 @@ migrate_shared() {
     mkdir -p "$WORKSPACE_DIR/shared/skills"
     cd "$WORKSPACE_DIR/shared/skills"
     
-    # Remove old symlinks (if they exist)
-    if [ -L "agent-state-manager" ]; then
-        rm -f agent-state-manager
-        log_success "Removed old symlink: agent-state-manager"
-    fi
-    
-    if [ -L "telegram-agent-setup" ]; then
-        rm -f telegram-agent-setup
-        log_success "Removed old symlink: telegram-agent-setup"
-    fi
-    
-    # Remove any stale symlinks
+    # Remove any existing symlinks (clean slate)
     if [ -L "multiagent-state-manager" ]; then
         rm -f multiagent-state-manager
     fi
@@ -163,11 +135,11 @@ migrate_shared() {
         rm -f multiagent-telegram-setup
     fi
     
-    # Create new symlinks
+    # Create symlinks
     ln -s "../../kit/skills/multiagent-state-manager" multiagent-state-manager
     ln -s "../../kit/skills/multiagent-telegram-setup" multiagent-telegram-setup
     
-    log_success "Updated shared skills"
+    log_success "Shared skills configured"
 }
 
 # Commit changes
@@ -177,7 +149,7 @@ git_commit() {
     if $DRY_RUN; then
         log_dry "Would run: git add kit (if submodule was added)"
         log_dry "Would run: git add -A (for all symlink changes)"
-        log_dry "Would run: git commit -m '[main] Migrate to openclaw-multiagent kit'"
+        log_dry "Would run: git commit -m '[main] Add openclaw-multiagent kit'"
         return 0
     fi
     
@@ -195,11 +167,11 @@ git_commit() {
     if git diff --cached --quiet; then
         log_warn "No changes to commit"
     else
-        git commit -m "[main] Migrate to openclaw-multiagent kit
+        git commit -m "[main] Add openclaw-multiagent kit
 
 - Added openclaw-multiagent as submodule
-- Updated agent skill symlinks to use kit/skills/
-- Updated shared/skills/ symlinks"
+- Created shared/skills/ with kit symlinks
+- Added skill symlinks to all agents"
         log_success "Changes committed"
     fi
 }
@@ -235,13 +207,13 @@ main() {
     log_info "Found agents: $agents"
     echo
     
-    # Migrate shared skills
-    migrate_shared
+    # Setup shared skills
+    setup_shared_skills
     echo
     
-    # Migrate each agent
+    # Setup each agent
     for agent in $agents; do
-        migrate_agent "$agent"
+        setup_agent_symlinks "$agent"
         echo
     done
     
