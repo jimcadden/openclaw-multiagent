@@ -62,7 +62,7 @@ if [ "$AHEAD" -gt 0 ]; then
 fi
 
 echo "╠════════════════════════════════════════════════════════════╣"
-echo "║  Run: ./agent-state-manager/scripts/commit_workspace.sh    ║"
+echo "║  Run: ./multiagent-state-manager/scripts/commit_workspace.sh ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
 
