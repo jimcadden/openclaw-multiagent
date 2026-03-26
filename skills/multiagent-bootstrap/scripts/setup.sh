@@ -220,7 +220,7 @@ customize_agent() {
     if $DRY_RUN; then
         log_dry "Would prompt for: Your name"
         log_dry "Would prompt for: What agent should call you (default: your name)"
-        log_dry "Would prompt for: Agent name (default: JimClaw)"
+        log_dry "Would prompt for: Agent name (default: $AGENT_NAME)"
         log_dry "Would prompt for: Agent emoji (default: 🤖)"
         log_dry "Would write: $WORKSPACE_DIR/$AGENT_NAME/USER.md"
         log_dry "Would write: $WORKSPACE_DIR/$AGENT_NAME/IDENTITY.md"
@@ -231,12 +231,12 @@ customize_agent() {
     if [ -t 0 ]; then
         read -p "Your name: " USER_NAME
         read -p "What should the agent call you? [$USER_NAME]: " USER_CALL
-        read -p "Agent name (how you address it): [JimClaw] " AGENT_ID_NAME
+        read -p "Agent name (how you address it): [$AGENT_NAME] " AGENT_ID_NAME
         read -p "Agent emoji: [🤖] " AGENT_EMOJI
     elif [ -r /dev/tty ]; then
         read -p "Your name: " USER_NAME < /dev/tty
         read -p "What should the agent call you? [$USER_NAME]: " USER_CALL < /dev/tty
-        read -p "Agent name (how you address it): [JimClaw] " AGENT_ID_NAME < /dev/tty
+        read -p "Agent name (how you address it): [$AGENT_NAME] " AGENT_ID_NAME < /dev/tty
         read -p "Agent emoji: [🤖] " AGENT_EMOJI < /dev/tty
     else
         log_warn "No terminal available, using defaults"
@@ -245,7 +245,7 @@ customize_agent() {
     
     # Set defaults
     USER_CALL="${USER_CALL:-$USER_NAME}"
-    AGENT_ID_NAME="${AGENT_ID_NAME:-JimClaw}"  
+    AGENT_ID_NAME="${AGENT_ID_NAME:-$AGENT_NAME}"
     AGENT_EMOJI="${AGENT_EMOJI:-🤖}"
     
     # Update USER.md
@@ -380,18 +380,16 @@ prompt_telegram() {
 
 # Initial git commit
 git_commit() {
-    log_info "Creating initial git commit..."
-    
     if $DRY_RUN; then
         log_dry "Would create: $WORKSPACE_DIR/.gitignore"
-        log_dry "Would run: git add -A"
-        log_dry "Would run: git commit -m '[init] Bootstrap agent workspace'"
+        log_dry "Would prompt: Create initial git commit? [Y/n]"
+        log_dry "Would run: git add -A && git commit -m '[init] Bootstrap agent workspace'"
         return 0
     fi
-    
+
     cd "$WORKSPACE_DIR"
-    
-    # Create .gitignore if it doesn't exist
+
+    # Always create .gitignore so it's ready even if the commit is skipped
     if [ ! -f ".gitignore" ]; then
         cat > ".gitignore" << 'EOF'
 # Runtime state (per-agent)
@@ -409,29 +407,46 @@ Thumbs.db
 EOF
         log_success "Created .gitignore"
     fi
-    
-    git add -A
 
-    # Verify git identity is configured before committing
-    local git_name git_email
-    git_name=$(git config user.name 2>/dev/null || true)
-    git_email=$(git config user.email 2>/dev/null || true)
+    echo
+    log_info "Git Commit"
+    log_info "----------"
 
-    if [ -z "$git_name" ] || [ -z "$git_email" ]; then
-        log_warn "Git identity not configured — skipping initial commit."
-        log_info "To commit manually, set your identity then run:"
-        log_info "  git config user.name \"Your Name\""
-        log_info "  git config user.email \"you@example.com\""
-        log_info "  cd $WORKSPACE_DIR && git commit -m '[init] Bootstrap agent workspace'"
-        return 0
+    local reply=""
+    if [ -t 0 ]; then
+        read -p "Create initial git commit? [Y/n] " -n 1 -r reply
+        echo
+    elif [ -r /dev/tty ]; then
+        printf "Create initial git commit? [Y/n] " >&2
+        read -r reply < /dev/tty
     fi
 
-    git commit -m "[init] Bootstrap agent workspace
+    # Default to yes
+    if [[ -z "$reply" || "$reply" =~ ^[Yy]$ ]]; then
+        # Verify git identity before attempting commit
+        local git_name git_email
+        git_name=$(git config user.name 2>/dev/null || true)
+        git_email=$(git config user.email 2>/dev/null || true)
+
+        if [ -z "$git_name" ] || [ -z "$git_email" ]; then
+            log_warn "Git identity not configured — cannot commit."
+            log_info "Set your identity and commit manually:"
+            log_info "  git config user.name \"Your Name\""
+            log_info "  git config user.email \"you@example.com\""
+            log_info "  cd $WORKSPACE_DIR && git add -A && git commit -m '[init] Bootstrap agent workspace'"
+            return 0
+        fi
+
+        git add -A
+        git commit -m "[init] Bootstrap agent workspace
 
 Agent: $AGENT_NAME
 OpenClaw: $(openclaw version 2>/dev/null || echo 'unknown')"
-    
-    log_success "Initial commit created"
+        log_success "Initial commit created"
+    else
+        log_info "Skipped. Commit manually when ready:"
+        log_info "  cd $WORKSPACE_DIR && git add -A && git commit -m '[init] Bootstrap agent workspace'"
+    fi
 }
 
 # Main
