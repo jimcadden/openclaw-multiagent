@@ -73,7 +73,8 @@ check_prereqs() {
         log_info "Adding the kit as a submodule..."
         cd "$WORKSPACE_DIR"
         git submodule add https://github.com/jimcadden/openclaw-multiagent.git kit
-        log_success "Submodule added"
+        cd kit && git checkout v0.1.0 && cd ..
+        log_success "Submodule added (pinned to v0.1.0)"
     fi
     
     log_success "Prerequisites OK"

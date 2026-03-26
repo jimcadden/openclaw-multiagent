@@ -24,6 +24,7 @@ Already have agents with IDENTITY.md, MEMORY.md, etc.? Use the migration script:
 ```bash
 cd ~/workspaces
 git submodule add https://github.com/jimcadden/openclaw-multiagent.git kit
+cd kit && git checkout v0.1.0 && cd ..
 ./kit/skills/multiagent-bootstrap/scripts/migrate.sh
 ```
 

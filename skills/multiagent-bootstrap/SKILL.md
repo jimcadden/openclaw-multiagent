@@ -98,8 +98,9 @@ If you prefer to do it manually:
 ```bash
 cd ~/workspaces
 
-# 1. Add the kit as a submodule
+# 1. Add the kit as a submodule and pin to release
 git submodule add https://github.com/jimcadden/openclaw-multiagent.git kit
+cd kit && git checkout v0.1.0 && cd ..
 
 # 2. Create shared skills directory with symlinks
 mkdir -p shared/skills
