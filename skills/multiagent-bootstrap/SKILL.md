@@ -23,6 +23,16 @@ Or if running standalone:
 ./setup.sh [agent-name]
 ```
 
+### Dry Run (Preview Mode)
+
+See what the bootstrap would do without making any changes:
+
+```bash
+./setup.sh --dry-run
+# or
+./setup.sh -n my-agent
+```
+
 ## What It Does
 
 1. **Validates environment** — checks OpenClaw is installed
