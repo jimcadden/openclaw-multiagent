@@ -2,6 +2,8 @@
 #
 # multiagent-bootstrap: One-time setup for OpenClaw multi-agent workspace
 #
+# Usage: ./setup.sh [agent-name]
+#        ./setup.sh --dry-run [agent-name]
 
 set -e
 
@@ -10,21 +12,48 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
+
+# Parse arguments
+DRY_RUN=false
+AGENT_NAME=""
+
+for arg in "$@"; do
+    case $arg in
+        --dry-run|-n)
+            DRY_RUN=true
+            shift
+            ;;
+        *)
+            AGENT_NAME="$arg"
+            shift
+            ;;
+    esac
+done
 
 # Paths
 WORKSPACE_DIR="${WORKSPACE_DIR:-$HOME/workspaces}"
 KIT_DIR="${KIT_DIR:-$WORKSPACE_DIR/kit}"
-AGENT_NAME="${1:-}"
 
 log_info() { echo -e "${BLUE}ℹ${NC} $1"; }
 log_success() { echo -e "${GREEN}✓${NC} $1"; }
 log_warn() { echo -e "${YELLOW}⚠${NC} $1"; }
 log_error() { echo -e "${RED}✗${NC} $1"; }
+log_dry() { echo -e "${CYAN}[DRY RUN]${NC} $1"; }
 
 # Check prerequisites
 check_prereqs() {
     log_info "Checking prerequisites..."
+    
+    if $DRY_RUN; then
+        log_dry "Would check: openclaw CLI exists"
+        log_dry "Would check: ~/.openclaw/ exists"
+        log_dry "Would check: ~/.openclaw/openclaw.json exists"
+        log_dry "Would check: $KIT_DIR exists"
+        log_dry "Would check: $WORKSPACE_DIR/.git exists (prompt to init if not)"
+        return 0
+    fi
     
     if ! command -v openclaw &> /dev/null; then
         log_error "OpenClaw not found. Please install OpenClaw first."
@@ -71,6 +100,13 @@ check_prereqs() {
 setup_shared() {
     log_info "Creating shared directory structure..."
     
+    if $DRY_RUN; then
+        log_dry "Would create: $WORKSPACE_DIR/shared/skills"
+        log_dry "Would symlink: $WORKSPACE_DIR/shared/skills/multiagent-state-manager -> $KIT_DIR/skills/multiagent-state-manager"
+        log_dry "Would symlink: $WORKSPACE_DIR/shared/skills/multiagent-telegram-setup -> $KIT_DIR/skills/multiagent-telegram-setup"
+        return 0
+    fi
+    
     mkdir -p "$WORKSPACE_DIR/shared/skills"
     
     # Symlink shared skills
@@ -89,9 +125,15 @@ setup_shared() {
 get_agent_name() {
     if [ -z "$AGENT_NAME" ]; then
         echo
-        log_info "What should we call your first agent?"
-        read -p "Agent name [main]: " AGENT_NAME
-        AGENT_NAME="${AGENT_NAME:-main}"
+        if $DRY_RUN; then
+            log_dry "Would prompt: 'What should we call your first agent?'"
+            log_dry "Would default to: main"
+            AGENT_NAME="main"
+        else
+            log_info "What should we call your first agent?"
+            read -p "Agent name [main]: " AGENT_NAME
+            AGENT_NAME="${AGENT_NAME:-main}"
+        fi
     fi
     
     # Validate name (alphanumeric, hyphen, underscore only)
@@ -112,6 +154,13 @@ get_agent_name() {
 create_agent() {
     log_info "Creating agent workspace from template..."
     
+    if $DRY_RUN; then
+        log_dry "Would copy: $KIT_DIR/workspace-template -> $WORKSPACE_DIR/$AGENT_NAME"
+        log_dry "Would symlink: $WORKSPACE_DIR/$AGENT_NAME/multiagent-state-manager -> ../shared/skills/multiagent-state-manager"
+        log_dry "Would symlink: $WORKSPACE_DIR/$AGENT_NAME/multiagent-telegram-setup -> ../shared/skills/multiagent-telegram-setup"
+        return 0
+    fi
+    
     cp -r "$KIT_DIR/workspace-template" "$WORKSPACE_DIR/$AGENT_NAME"
     
     # Symlink shared skills into agent directory
@@ -125,6 +174,16 @@ create_agent() {
 customize_agent() {
     log_info "Let's customize your agent..."
     echo
+    
+    if $DRY_RUN; then
+        log_dry "Would prompt for: Your name"
+        log_dry "Would prompt for: What agent should call you (default: your name)"
+        log_dry "Would prompt for: Agent name (default: JimClaw)"
+        log_dry "Would prompt for: Agent emoji (default: 🤖)"
+        log_dry "Would write: $WORKSPACE_DIR/$AGENT_NAME/USER.md"
+        log_dry "Would write: $WORKSPACE_DIR/$AGENT_NAME/IDENTITY.md"
+        return 0
+    fi
     
     # Get user info
     read -p "Your name: " USER_NAME
@@ -165,7 +224,7 @@ EOF
 
 ---
 
-This is me. I persist because someone wrote it down.
+This me. I persist because someone wrote it down.
 EOF
     
     log_success "Agent customized"
@@ -176,6 +235,13 @@ update_openclaw_config() {
     log_info "Updating OpenClaw configuration..."
     
     local CONFIG_FILE="$HOME/.openclaw/openclaw.json"
+    
+    if $DRY_RUN; then
+        log_dry "Would backup: $CONFIG_FILE"
+        log_dry "Would add agent to agents.list:"
+        log_dry "  { \"id\": \"$AGENT_NAME\", \"workspace\": \"$WORKSPACE_DIR/$AGENT_NAME\" }"
+        return 0
+    fi
     
     if [ ! -f "$CONFIG_FILE" ]; then
         log_error "OpenClaw config not found at $CONFIG_FILE"
@@ -233,6 +299,13 @@ prompt_telegram() {
     echo
     log_info "Telegram Setup"
     log_info "--------------"
+    
+    if $DRY_RUN; then
+        log_dry "Would prompt: 'Set up Telegram for this agent now? [y/N]'"
+        log_dry "Would skip by default, or run: $KIT_DIR/skills/multiagent-telegram-setup/scripts/setup-telegram-agent.py --agent $AGENT_NAME"
+        return 0
+    fi
+    
     read -p "Set up Telegram for this agent now? [y/N] " -n 1 -r
     echo
     
@@ -252,6 +325,13 @@ prompt_telegram() {
 # Initial git commit
 git_commit() {
     log_info "Creating initial git commit..."
+    
+    if $DRY_RUN; then
+        log_dry "Would create: $WORKSPACE_DIR/.gitignore"
+        log_dry "Would run: git add -A"
+        log_dry "Would run: git commit -m '[init] Bootstrap agent workspace'"
+        return 0
+    fi
     
     cd "$WORKSPACE_DIR"
     
@@ -286,9 +366,16 @@ OpenClaw: $(openclaw version 2>/dev/null || echo 'unknown')"
 # Main
 main() {
     echo
-    echo "╔════════════════════════════════════════════════════════╗"
-    echo "║  OpenClaw Multi-Agent Bootstrap                        ║"
-    echo "╚════════════════════════════════════════════════════════╝"
+    if $DRY_RUN; then
+        echo "╔════════════════════════════════════════════════════════╗"
+        echo "║  OpenClaw Multi-Agent Bootstrap                        ║"
+        echo "║  DRY RUN MODE - No changes will be made                ║"
+        echo "╚════════════════════════════════════════════════════════╝"
+    else
+        echo "╔════════════════════════════════════════════════════════╗"
+        echo "║  OpenClaw Multi-Agent Bootstrap                        ║"
+        echo "╚════════════════════════════════════════════════════════╝"
+    fi
     echo
     
     check_prereqs
@@ -301,14 +388,23 @@ main() {
     git_commit
     
     echo
-    echo "╔════════════════════════════════════════════════════════╗"
-    echo "║  Bootstrap Complete!                                   ║"
-    echo "╠════════════════════════════════════════════════════════╣"
-    echo "║  Next steps:                                           ║"
-    echo "║    1. Restart OpenClaw: openclaw gateway restart       ║"
-    echo "║    2. Verify agent: openclaw status                    ║"
-    echo "║    3. Start chatting with your agent!                  ║"
-    echo "╚════════════════════════════════════════════════════════╝"
+    if $DRY_RUN; then
+        echo "╔════════════════════════════════════════════════════════╗"
+        echo "║  Dry Run Complete!                                     ║"
+        echo "╠════════════════════════════════════════════════════════╣"
+        echo "║  No changes were made. To run for real:                ║"
+        echo "║    ./setup.sh [agent-name]                             ║"
+        echo "╚════════════════════════════════════════════════════════╝"
+    else
+        echo "╔════════════════════════════════════════════════════════╗"
+        echo "║  Bootstrap Complete!                                   ║"
+        echo "╠════════════════════════════════════════════════════════╣"
+        echo "║  Next steps:                                           ║"
+        echo "║    1. Restart OpenClaw: openclaw gateway restart       ║"
+        echo "║    2. Verify agent: openclaw status                    ║"
+        echo "║    3. Start chatting with your agent!                  ║"
+        echo "╚════════════════════════════════════════════════════════╝"
+    fi
     echo
 }
 
