@@ -19,6 +19,18 @@ With options:
 curl -fsSL https://raw.githubusercontent.com/jimcadden/openclaw-multiagent/main/install.sh | bash -s -- --workspace ~/my-agents --agent assistant
 ```
 
+**Options:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-w, --workspace DIR` | `~/workspaces` | Directory where agent workspaces are created |
+| `-a, --agent NAME` | `main` | Name of the first agent |
+| `-c, --openclaw-dir DIR` | `~/.openclaw` | Path to OpenClaw config directory (use if OpenClaw is installed in a non-default location) |
+
+**Requirements before running:**
+- OpenClaw must be installed and initialized (`~/.openclaw/openclaw.json` must exist)
+- `git` and `python3` must be on your PATH
+
 ## When to Use This
 
 | Scenario | What to Run |
@@ -137,9 +149,36 @@ git commit -m "[main] Update multiagent kit to v0.3.0"
 
 ## Requirements
 
-- OpenClaw 2026.3.8+
+- OpenClaw 2026.3.8+ (must be initialized — `~/.openclaw/openclaw.json` must exist)
 - Git
-- Python 3 (for Telegram setup)
+- Python 3 (for config updates and Telegram setup)
+
+## Verifying Your Install
+
+After running the install script, use the health check to verify the workspace is correctly wired up:
+
+```bash
+bash ~/workspaces/kit/skills/multiagent-kit-guide/scripts/check-setup.sh
+```
+
+Expected output:
+```
+✅ Kit directory exists
+✅ Kit is a git repo
+✅ Kit is on a tagged release
+✅ multiagent-state-manager symlink exists
+✅ multiagent-telegram-setup symlink exists
+✅ <agent-name>
+✅ Git repository initialized
+```
+
+**Running the installer smoke tests** (for contributors and testers):
+
+```bash
+bash scripts/test-install.sh
+```
+
+This exercises all installer failure modes in isolation — unknown flags, missing prereqs, missing config — without touching any real OpenClaw state.
 
 ## License
 

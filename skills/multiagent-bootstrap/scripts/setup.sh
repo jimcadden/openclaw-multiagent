@@ -35,6 +35,7 @@ done
 # Paths
 WORKSPACE_DIR="${WORKSPACE_DIR:-$HOME/workspaces}"
 KIT_DIR="${KIT_DIR:-$WORKSPACE_DIR/kit}"
+OPENCLAW_DIR="${OPENCLAW_DIR:-$HOME/.openclaw}"
 
 log_info() { echo -e "${BLUE}ℹ${NC} $1"; }
 log_tip() { echo -e "${CYAN}💡${NC} $1"; }
@@ -100,14 +101,15 @@ check_prereqs() {
         exit 1
     fi
     
-    if [ ! -d "$HOME/.openclaw" ]; then
-        log_error "OpenClaw config directory not found at ~/.openclaw"
-        log_info "Please ensure OpenClaw is properly installed."
+    if [ ! -d "$OPENCLAW_DIR" ]; then
+        log_error "OpenClaw config directory not found at $OPENCLAW_DIR"
+        log_info "Ensure OpenClaw is installed and initialized."
+        log_info "If using a custom location, pass: --openclaw-dir PATH to install.sh"
         exit 1
     fi
     
-    if [ ! -f "$HOME/.openclaw/openclaw.json" ]; then
-        log_error "OpenClaw config file not found at ~/.openclaw/openclaw.json"
+    if [ ! -f "$OPENCLAW_DIR/openclaw.json" ]; then
+        log_error "openclaw.json not found in $OPENCLAW_DIR"
         log_info "Run OpenClaw at least once to initialize the config."
         exit 1
     fi
@@ -283,7 +285,7 @@ EOF
 update_openclaw_config() {
     log_info "Updating OpenClaw configuration..."
     
-    local CONFIG_FILE="$HOME/.openclaw/openclaw.json"
+    local CONFIG_FILE="$OPENCLAW_DIR/openclaw.json"
     
     if $DRY_RUN; then
         log_dry "Would backup: $CONFIG_FILE"
@@ -293,7 +295,7 @@ update_openclaw_config() {
     fi
     
     if [ ! -f "$CONFIG_FILE" ]; then
-        log_error "OpenClaw config not found at $CONFIG_FILE"
+        log_error "openclaw.json not found at $CONFIG_FILE"
         exit 1
     fi
     
@@ -351,25 +353,27 @@ prompt_telegram() {
         return 0
     fi
     
-    # Only prompt if interactive terminal
+    log_info "Telegram Setup"
+    log_info "--------------"
+
+    local reply=""
     if [ -t 0 ]; then
-        log_info "Telegram Setup"
-        log_info "--------------"
-        read -p "Set up Telegram for this agent now? [y/N] " -n 1 -r
+        read -p "Set up Telegram for this agent now? [y/N] " -n 1 -r reply
         echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Running Telegram setup..."
-            if [ -f "$KIT_DIR/skills/multiagent-telegram-setup/scripts/setup-telegram-agent.py" ]; then
-                python3 "$KIT_DIR/skills/multiagent-telegram-setup/scripts/setup-telegram-agent.py" --agent "$AGENT_NAME"
-            else
-                log_warn "Telegram setup script not found"
-            fi
+    elif [ -r /dev/tty ]; then
+        printf "Set up Telegram for this agent now? [y/N] " >&2
+        read -r reply < /dev/tty
+    fi
+
+    if [[ "$reply" =~ ^[Yy]$ ]]; then
+        log_info "Running Telegram setup..."
+        if [ -f "$KIT_DIR/skills/multiagent-telegram-setup/scripts/setup-telegram-agent.py" ]; then
+            python3 "$KIT_DIR/skills/multiagent-telegram-setup/scripts/setup-telegram-agent.py" --agent "$AGENT_NAME"
         else
-            log_info "Skipped. Run later with:"
-            log_info "  python3 $KIT_DIR/skills/multiagent-telegram-setup/scripts/setup-telegram-agent.py --agent $AGENT_NAME"
+            log_warn "Telegram setup script not found"
         fi
     else
-        log_info "Telegram setup: Run later with"
+        log_info "Skipped. Run later with:"
         log_info "  python3 $KIT_DIR/skills/multiagent-telegram-setup/scripts/setup-telegram-agent.py --agent $AGENT_NAME"
     fi
 }
@@ -407,6 +411,21 @@ EOF
     fi
     
     git add -A
+
+    # Verify git identity is configured before committing
+    local git_name git_email
+    git_name=$(git config user.name 2>/dev/null || true)
+    git_email=$(git config user.email 2>/dev/null || true)
+
+    if [ -z "$git_name" ] || [ -z "$git_email" ]; then
+        log_warn "Git identity not configured — skipping initial commit."
+        log_info "To commit manually, set your identity then run:"
+        log_info "  git config user.name \"Your Name\""
+        log_info "  git config user.email \"you@example.com\""
+        log_info "  cd $WORKSPACE_DIR && git commit -m '[init] Bootstrap agent workspace'"
+        return 0
+    fi
+
     git commit -m "[init] Bootstrap agent workspace
 
 Agent: $AGENT_NAME

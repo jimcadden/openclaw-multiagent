@@ -26,6 +26,7 @@ NC='\033[0m'
 KIT_REPO="https://github.com/jimcadden/openclaw-multiagent.git"
 WORKSPACE_DIR=""
 AGENT_NAME=""
+OPENCLAW_DIR=""
 
 # Input helper - reads from terminal even when piped
 read_tty() {
@@ -90,16 +91,38 @@ parse_args() {
     while [[ $# -gt 0 ]]; do
         case $1 in
             --workspace|-w)
+                if [[ -z "${2:-}" || "${2:-}" == -* ]]; then
+                    log_error "--workspace requires a directory path"
+                    exit 1
+                fi
                 WORKSPACE_DIR="$2"
                 shift 2
                 ;;
             --agent|-a)
+                if [[ -z "${2:-}" || "${2:-}" == -* ]]; then
+                    log_error "--agent requires a name"
+                    exit 1
+                fi
                 AGENT_NAME="$2"
+                shift 2
+                ;;
+            --openclaw-dir|-c)
+                if [[ -z "${2:-}" || "${2:-}" == -* ]]; then
+                    log_error "--openclaw-dir requires a directory path"
+                    exit 1
+                fi
+                OPENCLAW_DIR="$2"
                 shift 2
                 ;;
             --help|-h)
                 show_help
                 exit 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                echo ""
+                show_help
+                exit 1
                 ;;
         esac
     done
@@ -111,13 +134,19 @@ show_help() {
     echo "Usage: install.sh [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  -w, --workspace DIR    Workspace directory (default: ~/workspaces)"  
-    echo "  -a, --agent NAME       First agent name (default: main)"
-    echo "  -h, --help             Show this help"
+    echo "  -w, --workspace DIR      Workspace directory (default: ~/workspaces)"
+    echo "  -a, --agent NAME         First agent name (default: main)"
+    echo "  -c, --openclaw-dir DIR   OpenClaw config directory (default: ~/.openclaw)"
+    echo "  -h, --help               Show this help"
+    echo ""
+    echo "Requirements:"
+    echo "  OpenClaw must be installed and initialized before running this script."
+    echo "  The OpenClaw config directory must contain openclaw.json."
     echo ""
     echo "Examples:"
     echo '  curl -fsSL .../install.sh | bash'
     echo '  curl -fsSL .../install.sh | bash -s -- --agent bot --workspace ~/agents'
+    echo '  bash install.sh --openclaw-dir /custom/oc --workspace ~/agents --agent main'
 }
 
 # Get workspace directory
@@ -154,24 +183,44 @@ ask_telegram() {
     : 
 }
 
+# Resolve and validate the OpenClaw config directory
+resolve_openclaw_dir() {
+    # Expand tilde if present
+    OPENCLAW_DIR="${OPENCLAW_DIR:-$HOME/.openclaw}"
+    OPENCLAW_DIR="${OPENCLAW_DIR/#\~/$HOME}"
+}
+
 # Check prerequisites
 check_prereqs() {
     log_step "Prerequisites"
     
     if ! command -v git &> /dev/null; then
-        log_error "Git is required but not installed"
+        log_error "git is required but not installed."
         exit 1
     fi
-    
-    if ! command -v openclaw &> /dev/null; then
-        log_error "OpenClaw not found. Install first: npm install -g openclaw"
+    log_success "git found"
+
+    if ! command -v python3 &> /dev/null; then
+        log_error "python3 is required but not found on PATH."
+        log_info "Install Python 3 and ensure it is on your PATH, then re-run."
         exit 1
     fi
-    
-    if [ ! -d "$HOME/.openclaw" ]; then
-        log_error "OpenClaw not initialized. Run 'openclaw' first."
+    log_success "python3 found"
+
+    if [ ! -d "$OPENCLAW_DIR" ]; then
+        log_error "OpenClaw config directory not found: $OPENCLAW_DIR"
+        log_info "Ensure OpenClaw is installed and initialized."
+        log_info "If using a custom location, pass: --openclaw-dir PATH"
         exit 1
     fi
+    log_success "OpenClaw config directory found: $OPENCLAW_DIR"
+
+    if [ ! -f "$OPENCLAW_DIR/openclaw.json" ]; then
+        log_error "openclaw.json not found in $OPENCLAW_DIR"
+        log_info "Run OpenClaw at least once to generate the config, then re-run."
+        exit 1
+    fi
+    log_success "openclaw.json found"
     
     log_success "All prerequisites met"
 }
@@ -207,6 +256,7 @@ setup_kit() {
     
     export WORKSPACE_DIR
     export KIT_DIR="$WORKSPACE_DIR/kit"
+    export OPENCLAW_DIR
 }
 
 # Run bootstrap
@@ -230,6 +280,7 @@ main() {
     echo
     
     parse_args "$@"
+    resolve_openclaw_dir
     check_prereqs
     get_workspace_dir
     get_agent_name
@@ -237,6 +288,7 @@ main() {
     
     # Confirm everything
     log_step "Ready to Install"
+    log_info "OpenClaw config: $OPENCLAW_DIR"
     log_info "Workspace: $WORKSPACE_DIR"
     log_info "Agent: $AGENT_NAME"
     
