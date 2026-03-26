@@ -52,19 +52,24 @@ The install script handles everything:
 Already have agents with IDENTITY.md, MEMORY.md, etc.? Use the migration script:
 
 ```bash
-cd ~/workspaces
-git submodule add https://github.com/jimcadden/openclaw-multiagent.git kit
-cd kit && git checkout v0.2.2 && cd ..
 ./kit/skills/multiagent-bootstrap/scripts/migrate.sh
 ```
 
-The migration script:
-- Adds the kit as a submodule
-- Updates all skill symlinks to point to `kit/skills/`
-- Preserves your existing agent data
-- Commits the changes
+With options (defaults shown):
+```bash
+./migrate.sh --workspace ~/.openclaw/workspace --openclaw-dir ~/.openclaw
+./migrate.sh --dry-run   # preview changes without making them
+```
 
-See `skills/multiagent-bootstrap/SKILL.md` for manual migration steps.
+The migration script:
+- Validates prereqs (git, python3, openclaw config) before touching anything
+- Adds the kit as a git submodule and checks out the latest release tag
+- Creates `shared/skills/` with kit symlinks
+- Wires per-agent symlinks through `shared/skills/`
+- Preserves all existing agent data (IDENTITY.md, MEMORY.md, etc.)
+- Prompts before committing
+
+See `skills/multiagent-bootstrap/SKILL.md` for manual steps and agent-driven migration.
 
 ## Manual Install (Old Way)
 

@@ -281,6 +281,210 @@ if should_run "prereqs_all_pass"; then
     teardown_env
 fi
 
+# ─── migrate.sh tests ─────────────────────────────────────────────────────────
+
+MIGRATE_SH="$REPO_ROOT/skills/multiagent-bootstrap/scripts/migrate.sh"
+
+# Run migrate.sh with given args in the isolated environment.
+run_migrate() {
+    set +e
+    OUT=$(
+        HOME="$TMP_HOME" \
+        PATH="$TMP_BIN:/usr/bin:/bin" \
+        GIT_CONFIG_GLOBAL="$TMP_HOME/.gitconfig" \
+            bash "$MIGRATE_SH" "$@" < /dev/null 2>&1
+    )
+    RC=$?
+    set -e
+}
+
+# Create a minimal agent directory (has IDENTITY.md + SOUL.md).
+make_agent_dir() {
+    local ws="$1" name="$2"
+    mkdir -p "$ws/$name"
+    printf "# IDENTITY\n" > "$ws/$name/IDENTITY.md"
+    printf "# SOUL\n"     > "$ws/$name/SOUL.md"
+}
+
+# Init a bare git repo in workspace (no identity needed for init).
+init_workspace_git() {
+    local ws="$1"
+    mkdir -p "$ws"
+    git -C "$ws" init -q
+}
+
+section "migrate.sh — argument parsing"
+
+if should_run "migrate_unknown_flag"; then
+    setup_env
+    stub_bin "git" "git version 2.x"
+    stub_bin "python3" "Python 3.x"
+    setup_openclaw
+    setup_git_identity
+    run_migrate --not-a-real-flag
+    if [ "$RC" -ne 0 ] && out_contains "Unknown option"; then
+        pass "migrate_unknown_flag: exits non-zero with 'Unknown option'"
+    else
+        fail "migrate_unknown_flag: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+if should_run "migrate_missing_workspace_value"; then
+    setup_env
+    stub_bin "git" "git version 2.x"
+    stub_bin "python3" "Python 3.x"
+    setup_openclaw
+    setup_git_identity
+    run_migrate --workspace
+    if [ "$RC" -ne 0 ] && out_contains "--workspace requires"; then
+        pass "migrate_missing_workspace_value: exits non-zero with clear message"
+    else
+        fail "migrate_missing_workspace_value: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+if should_run "migrate_missing_openclaw_dir_value"; then
+    setup_env
+    stub_bin "git" "git version 2.x"
+    stub_bin "python3" "Python 3.x"
+    setup_openclaw
+    setup_git_identity
+    run_migrate --openclaw-dir
+    if [ "$RC" -ne 0 ] && out_contains "--openclaw-dir requires"; then
+        pass "migrate_missing_openclaw_dir_value: exits non-zero with clear message"
+    else
+        fail "migrate_missing_openclaw_dir_value: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+section "migrate.sh — prerequisites"
+
+if should_run "migrate_missing_python3"; then
+    setup_env
+    stub_bin "git" "git version 2.x"
+    # python3 NOT stubbed
+    setup_openclaw
+    setup_git_identity
+    run_migrate --workspace "$TMP_WORKSPACE" --openclaw-dir "$TMP_OC_DIR"
+    if [ "$RC" -ne 0 ] && out_contains "python3"; then
+        pass "migrate_missing_python3: exits non-zero with 'python3' in message"
+    else
+        fail "migrate_missing_python3: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+if should_run "migrate_missing_openclaw_json"; then
+    setup_env
+    stub_bin "git" "git version 2.x"
+    stub_bin "python3" "Python 3.x"
+    mkdir -p "$TMP_OC_DIR"  # dir exists but no openclaw.json
+    setup_git_identity
+    run_migrate --workspace "$TMP_WORKSPACE" --openclaw-dir "$TMP_OC_DIR"
+    if [ "$RC" -ne 0 ] && out_contains "openclaw.json"; then
+        pass "migrate_missing_openclaw_json: exits non-zero with 'openclaw.json' in message"
+    else
+        fail "migrate_missing_openclaw_json: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+if should_run "migrate_workspace_not_found"; then
+    setup_env
+    stub_bin "git" "git version 2.x"
+    stub_bin "python3" "Python 3.x"
+    setup_openclaw
+    setup_git_identity
+    # TMP_WORKSPACE not created
+    run_migrate --workspace "$TMP_WORKSPACE" --openclaw-dir "$TMP_OC_DIR"
+    if [ "$RC" -ne 0 ] && out_contains "not found"; then
+        pass "migrate_workspace_not_found: exits non-zero with 'not found' message"
+    else
+        fail "migrate_workspace_not_found: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+if should_run "migrate_workspace_no_git"; then
+    setup_env
+    stub_bin "git" "git version 2.x"
+    stub_bin "python3" "Python 3.x"
+    setup_openclaw
+    setup_git_identity
+    mkdir -p "$TMP_WORKSPACE"  # exists but no .git
+    run_migrate --workspace "$TMP_WORKSPACE" --openclaw-dir "$TMP_OC_DIR"
+    if [ "$RC" -ne 0 ] && out_contains "git"; then
+        pass "migrate_workspace_no_git: exits non-zero with 'git' message"
+    else
+        fail "migrate_workspace_no_git: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+if should_run "migrate_no_agents_found"; then
+    setup_env
+    stub_bin "git" "git version 2.x"
+    stub_bin "python3" "Python 3.x"
+    setup_openclaw
+    setup_git_identity
+    init_workspace_git "$TMP_WORKSPACE"
+    # Workspace exists and has .git, but no agent dirs
+    run_migrate --workspace "$TMP_WORKSPACE" --openclaw-dir "$TMP_OC_DIR"
+    if [ "$RC" -ne 0 ] && out_contains "No existing agents found"; then
+        pass "migrate_no_agents_found: exits non-zero with clear message"
+    else
+        fail "migrate_no_agents_found: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+section "migrate.sh — dry run with agents"
+
+if should_run "migrate_dry_run"; then
+    setup_env
+    stub_bin "git" "git version 2.x"
+    stub_bin "python3" "Python 3.x"
+    setup_openclaw
+    setup_git_identity
+    init_workspace_git "$TMP_WORKSPACE"
+    make_agent_dir "$TMP_WORKSPACE" "myagent"
+    run_migrate --dry-run --workspace "$TMP_WORKSPACE" --openclaw-dir "$TMP_OC_DIR"
+    if [ "$RC" -eq 0 ] && out_contains "DRY RUN"; then
+        pass "migrate_dry_run: exits 0 and shows DRY RUN banner"
+    else
+        fail "migrate_dry_run: RC=$RC, output: $OUT"
+    fi
+    if [ ! -d "$TMP_WORKSPACE/kit" ] && [ ! -d "$TMP_WORKSPACE/shared" ]; then
+        pass "migrate_dry_run: no filesystem changes made"
+    else
+        fail "migrate_dry_run: dry run created files it should not have"
+    fi
+    teardown_env
+fi
+
+section "migrate.sh — prereqs all pass"
+
+if should_run "migrate_prereqs_all_pass"; then
+    setup_env
+    stub_bin "git" "git version 2.x"
+    stub_bin "python3" "Python 3.x"
+    setup_openclaw
+    setup_git_identity
+    init_workspace_git "$TMP_WORKSPACE"
+    make_agent_dir "$TMP_WORKSPACE" "myagent"
+    run_migrate --workspace "$TMP_WORKSPACE" --openclaw-dir "$TMP_OC_DIR"
+    if out_contains "All prerequisites met"; then
+        pass "migrate_prereqs_all_pass: prereqs pass with valid environment and agents"
+    else
+        fail "migrate_prereqs_all_pass: prereqs failed (RC=$RC)"
+        echo "  output: $OUT"
+    fi
+    teardown_env
+fi
+
 # ─── Summary ──────────────────────────────────────────────────────────────────
 
 echo
