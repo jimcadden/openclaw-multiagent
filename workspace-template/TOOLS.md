@@ -45,6 +45,7 @@ Track which skills are custom-built vs kit-provided:
 - multiagent-state-manager — Git workspace management
 - multiagent-telegram-setup — Telegram bot configuration
 - multiagent-add-agent — Create new agents
+- multiagent-remove-agent — Remove and archive agents
 - multiagent-memory-manager — Memory distillation
 
 ---

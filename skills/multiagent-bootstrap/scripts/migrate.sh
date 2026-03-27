@@ -422,7 +422,7 @@ setup_shared_skills() {
 
     if $DRY_RUN; then
         log_dry "Would create: $WORKSPACE_DIR/shared/skills/"
-        for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-memory-manager; do
+        for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-remove-agent multiagent-memory-manager; do
             log_dry "Would symlink: shared/skills/$skill -> ../../kit/skills/$skill"
         done
         return 0
@@ -437,7 +437,7 @@ setup_shared_skills() {
     done
 
     # Remove and recreate to ensure correct target
-    for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-memory-manager; do
+    for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-remove-agent multiagent-memory-manager; do
         [ -L "$skill" ] && rm -f "$skill"
         ln -s "../../kit/skills/$skill" "$skill"
         log_success "Linked shared/skills/$skill"

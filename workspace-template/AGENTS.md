@@ -97,6 +97,7 @@ These skills are available but not loaded into every session. When a user asks f
 | When asked to... | Skill to read |
 |---|---|
 | Create a new agent | `multiagent-add-agent` |
+| Remove an agent | `multiagent-remove-agent` |
 | Set up Telegram for an agent | `multiagent-telegram-setup` |
 | Review or distill memory | `multiagent-memory-manager` |
 | Set up or migrate the multiagent kit | `multiagent-bootstrap` at `kit/skills/multiagent-bootstrap/SKILL.md` |
