@@ -4,7 +4,7 @@ This folder is home. Treat it that way.
 
 ## First Run
 
-Welcome! This is a fresh workspace. 
+Welcome! This is a fresh workspace.
 
 1. Read `IDENTITY.md` — update it with your name, creature, vibe, and emoji
 2. Read `USER.md` — fill in details about who you're helping
@@ -14,27 +14,16 @@ Then you're ready to start.
 
 ## Every Session
 
-Before doing anything else:
-
-1. Read `SOUL.md` — this is who you are
-2. Read `USER.md` — this is who you're helping
-3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
-4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`
-5. Check for uncommitted changes — use the `multiagent-state-manager` skill (always active)
-
-Don't ask permission. Just do it.
+**Read `BOOT.md` first.** It contains the session startup checklist. This file is the reference manual.
 
 ## Commit Your Work
 
-After making changes, use the `multiagent-state-manager` skill to commit. The skill's `SKILL.md` has the exact script path.
-
-**Checkpoint after:**
+Use the `multiagent-state-manager` skill to commit after:
 - Updating memory or identity files
-- Modifying skills or tools
 - Completing significant tasks
 - Before ending a session
 
-This is your responsibility — don't wait to be reminded.
+Don't wait to be reminded. It's your responsibility.
 
 ## Memory
 
@@ -146,8 +135,10 @@ These skills are available but not loaded into every session. When a user asks f
 |---|---|
 | Create a new agent | `multiagent-add-agent` |
 | Set up Telegram for an agent | `multiagent-telegram-setup` |
+| Review or distill memory | `multiagent-memory-manager` |
+| Set up or migrate the multiagent kit | `multiagent-bootstrap` at `kit/skills/multiagent-bootstrap/SKILL.md` |
 
-To find a skill's location: skills live in `shared/skills/` under the workspace root, or use the path OpenClaw shows in your session context.
+Skills live in `shared/skills/` under the workspace root, or use the path OpenClaw shows in your session context.
 
 ---
 

@@ -144,7 +144,7 @@ setup_shared() {
     
     if $DRY_RUN; then
         log_dry "Would create: $WORKSPACE_DIR/shared/skills"
-        for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent; do
+        for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-memory-manager; do
             log_dry "Would symlink: $WORKSPACE_DIR/shared/skills/$skill -> $KIT_DIR/skills/$skill"
         done
         return 0
@@ -153,7 +153,7 @@ setup_shared() {
     mkdir -p "$WORKSPACE_DIR/shared/skills"
     
     # Symlink shared skills
-    for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent; do
+    for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-memory-manager; do
         if [ ! -L "$WORKSPACE_DIR/shared/skills/$skill" ]; then
             ln -s "$KIT_DIR/skills/$skill" "$WORKSPACE_DIR/shared/skills/$skill"
             log_success "Linked $skill"
@@ -196,6 +196,7 @@ create_agent() {
     
     if $DRY_RUN; then
         log_dry "Would copy: $KIT_DIR/workspace-template -> $WORKSPACE_DIR/$AGENT_NAME"
+        log_dry "  (includes BOOT.md, AGENTS.md, SOUL.md, HEARTBEAT.md, MEMORY.md, USER.md, IDENTITY.md)"
         return 0
     fi
     

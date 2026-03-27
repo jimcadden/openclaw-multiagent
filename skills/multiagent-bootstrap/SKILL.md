@@ -1,3 +1,10 @@
+---
+name: multiagent-bootstrap
+description: Set up or migrate an OpenClaw workspace to use the multiagent kit. Use when asked to install the multiagent kit, run workspace setup for the first time, or migrate existing agents to the multiagent structure.
+disable-model-invocation: true
+user-invocable: true
+---
+
 # multiagent-bootstrap
 
 One-time bootstrap or migration for OpenClaw multi-agent workspace.
@@ -58,9 +65,10 @@ Or with an agent name:
 ├── kit/                       # this submodule (unchanged)
 ├── shared/
 │   └── skills/                # registered via skills.load.extraDirs in openclaw.json
-│       ├── multiagent-state-manager  -> ../../kit/skills/multiagent-state-manager
-│       ├── multiagent-telegram-setup -> ../../kit/skills/multiagent-telegram-setup
-│       └── multiagent-kit-guide      -> ../../kit/skills/multiagent-kit-guide
+│       ├── multiagent-state-manager   -> ../../kit/skills/multiagent-state-manager
+│       ├── multiagent-telegram-setup  -> ../../kit/skills/multiagent-telegram-setup
+│       ├── multiagent-add-agent       -> ../../kit/skills/multiagent-add-agent
+│       └── multiagent-memory-manager  -> ../../kit/skills/multiagent-memory-manager
 └── <agent-name>/
     ├── AGENTS.md
     ├── HEARTBEAT.md
@@ -97,14 +105,23 @@ With options:
 
 ### Usage — via agent
 
-If you prefer to have your running agent perform the migration, give it this instruction:
+When asked to migrate, follow these steps:
 
-> Read the skill at `<workspace>/kit/skills/multiagent-bootstrap/SKILL.md` and run the migration steps for my existing agents.
-
-The agent will:
-1. Read this skill for context
-2. Invoke `migrate.sh` (or replicate its steps using file/shell tools)
-3. Report back what was changed and prompt for git commit
+1. **Confirm the workspace path** — ask the user if the default (`~/.openclaw/workspace`) is correct, or if they have a custom location
+2. **Run dry-run first** to show what will change:
+   ```bash
+   <path-to-kit>/skills/multiagent-bootstrap/scripts/migrate.sh --dry-run
+   ```
+3. **Show the dry-run output** to the user and confirm before proceeding
+4. **Run migration**:
+   ```bash
+   <path-to-kit>/skills/multiagent-bootstrap/scripts/migrate.sh
+   ```
+5. **Report what changed** — agents found, symlinks created, config updated
+6. **Instruct the user to restart the gateway**:
+   ```
+   openclaw gateway restart
+   ```
 
 ### What Migration Does
 
@@ -137,9 +154,10 @@ cd ..
 
 # 2. Create shared skills directory
 mkdir -p shared/skills
-ln -s ../../kit/skills/multiagent-state-manager shared/skills/multiagent-state-manager
+ln -s ../../kit/skills/multiagent-state-manager  shared/skills/multiagent-state-manager
 ln -s ../../kit/skills/multiagent-telegram-setup shared/skills/multiagent-telegram-setup
-ln -s ../../kit/skills/multiagent-kit-guide     shared/skills/multiagent-kit-guide
+ln -s ../../kit/skills/multiagent-add-agent      shared/skills/multiagent-add-agent
+ln -s ../../kit/skills/multiagent-memory-manager shared/skills/multiagent-memory-manager
 
 # 3. Register shared skills in openclaw.json
 # Add to ~/.openclaw/openclaw.json:

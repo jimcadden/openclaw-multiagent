@@ -551,7 +551,7 @@ if should_run "migrate_prereqs_all_pass"; then
     teardown_env
 fi
 
-section "migrate.sh — shared skills include add-agent, exclude kit-guide"
+section "migrate.sh — shared skills set"
 
 if should_run "migrate_shared_skills_set"; then
     setup_env
@@ -562,13 +562,15 @@ if should_run "migrate_shared_skills_set"; then
     init_workspace_git "$TMP_WORKSPACE"
     make_agent_dir "$TMP_WORKSPACE" "myagent"
     run_migrate --dry-run --workspace "$TMP_WORKSPACE" --openclaw-dir "$TMP_OC_DIR"
-    if out_contains "multiagent-add-agent"; then
-        pass "migrate_shared_skills_set: multiagent-add-agent included in shared skills"
-    else
-        fail "migrate_shared_skills_set: multiagent-add-agent missing from dry run output"
-    fi
+    for expected_skill in multiagent-add-agent multiagent-memory-manager multiagent-state-manager multiagent-telegram-setup; do
+        if out_contains "$expected_skill"; then
+            pass "migrate_shared_skills_set: $expected_skill included"
+        else
+            fail "migrate_shared_skills_set: $expected_skill missing from dry run output"
+        fi
+    done
     if ! out_contains "multiagent-kit-guide"; then
-        pass "migrate_shared_skills_set: multiagent-kit-guide not in shared skills"
+        pass "migrate_shared_skills_set: multiagent-kit-guide correctly excluded"
     else
         fail "migrate_shared_skills_set: multiagent-kit-guide should not be in shared skills"
     fi
