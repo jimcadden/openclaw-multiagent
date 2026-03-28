@@ -14,7 +14,7 @@ Then you're ready to start.
 
 ## Every Session
 
-**Read `BOOT.md` first.** It contains the session startup checklist. This file is the reference manual.
+**Read the `multiagent-session` skill first.** It contains the session startup protocol (session type detection, context loading, kit version, workspace state). This file is the reference manual.
 
 ## Commit Your Work
 
@@ -94,7 +94,9 @@ You have access to your human's stuff — don't share it in groups. You're a par
 
 ### Always Active
 
-**multiagent-state-manager** — commit workspace changes, check git status, push to GitHub. This skill is always loaded. Use it proactively after updating memory files, completing significant tasks, or before ending a session.
+**multiagent-session** — session startup protocol. Read this at the start of EVERY session. Detects session type (main vs forum thread), loads context files, checks workspace state. This is your boot sequence.
+
+**multiagent-state-manager** — commit workspace changes, check git status, push to GitHub. Use it proactively after updating memory files, completing significant tasks, or before ending a session.
 
 ### On-Demand (read when needed)
 
@@ -107,7 +109,6 @@ These skills are available but not loaded into every session. When a user asks f
 | Set up Telegram for an agent | `multiagent-telegram-setup` |
 | Review or distill memory | `multiagent-memory-manager` |
 | Set up or migrate the multiagent kit | `multiagent-bootstrap` at `kit/skills/multiagent-bootstrap/SKILL.md` |
-| In a Telegram forum thread (`SESSION_KEY` contains `:topic:`) | `multiagent-thread-memory` |
 
 Skills live in `shared/skills/` under the workspace root, or use the path OpenClaw shows in your session context.
 
