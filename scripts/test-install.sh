@@ -281,6 +281,38 @@ if should_run "prereqs_all_pass"; then
     teardown_env
 fi
 
+section "install.sh — git setup"
+
+if should_run "install_git_setup_prompts_identity"; then
+    setup_env
+    stub_bin "git" "git version 2.x"
+    stub_bin "python3" "Python 3.x"
+    setup_openclaw
+    # No git identity configured — script should prompt
+    run_install --openclaw-dir "$TMP_OC_DIR"
+    if out_contains "Git identity" || out_contains "Git user name"; then
+        pass "install_git_setup_prompts_identity: prompts for git identity when not configured"
+    else
+        fail "install_git_setup_prompts_identity: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+if should_run "install_git_setup_shows_existing"; then
+    setup_env
+    stub_bin "git" "git version 2.x"
+    stub_bin "python3" "Python 3.x"
+    setup_openclaw
+    setup_git_identity
+    run_install --openclaw-dir "$TMP_OC_DIR"
+    if out_contains "Git Setup"; then
+        pass "install_git_setup_shows_existing: git setup step runs"
+    else
+        fail "install_git_setup_shows_existing: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
 # ─── migrate.sh tests ─────────────────────────────────────────────────────────
 
 MIGRATE_SH="$REPO_ROOT/skills/multiagent-bootstrap/scripts/migrate.sh"
@@ -523,10 +555,29 @@ if should_run "migrate_no_git_offers_init"; then
     mkdir -p "$TMP_WORKSPACE"
     # No .git — workspace exists but is not a repo
     run_migrate --workspace "$TMP_WORKSPACE" --openclaw-dir "$TMP_OC_DIR"
-    if out_contains "Initialize git"; then
+    if out_contains "Initialize" && out_contains "git"; then
         pass "migrate_no_git_offers_init: prompts to initialize git repo"
     else
         fail "migrate_no_git_offers_init: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+section "migrate.sh — git identity"
+
+if should_run "migrate_dry_run_mentions_git_identity"; then
+    setup_env
+    stub_bin "git" "git version 2.x"
+    stub_bin "python3" "Python 3.x"
+    setup_openclaw
+    setup_git_identity
+    init_workspace_git "$TMP_WORKSPACE"
+    make_agent_dir "$TMP_WORKSPACE" "myagent"
+    run_migrate --dry-run --workspace "$TMP_WORKSPACE" --openclaw-dir "$TMP_OC_DIR"
+    if out_contains "git user identity" || out_contains "user.name" || out_contains "Git Setup"; then
+        pass "migrate_dry_run_mentions_git_identity: dry run mentions git identity step"
+    else
+        fail "migrate_dry_run_mentions_git_identity: RC=$RC, output: $OUT"
     fi
     teardown_env
 fi

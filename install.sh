@@ -225,6 +225,74 @@ check_prereqs() {
     log_success "All prerequisites met"
 }
 
+# Set up git repository and identity for workspace commits
+setup_git() {
+    log_step "Git Setup"
+
+    mkdir -p "$WORKSPACE_DIR"
+
+    if [ -d "$WORKSPACE_DIR/.git" ]; then
+        log_success "Existing git repository found: $WORKSPACE_DIR"
+        if ! confirm "Use this repository for workspace management?" "y"; then
+            log_info "Aborted — a git repository is required for workspace management"
+            exit 0
+        fi
+    else
+        log_info "No git repository in $WORKSPACE_DIR"
+        if confirm "Initialize a git repository to manage your workspaces?" "y"; then
+            git -C "$WORKSPACE_DIR" init -q
+            log_success "Initialized git repository"
+        else
+            log_warn "Skipping git init — you can initialize manually later:"
+            log_info "  cd $WORKSPACE_DIR && git init"
+            return 0
+        fi
+    fi
+
+    # Check git identity (local repo config, then global fallback)
+    local git_name git_email
+    git_name=$(git -C "$WORKSPACE_DIR" config user.name 2>/dev/null || true)
+    git_email=$(git -C "$WORKSPACE_DIR" config user.email 2>/dev/null || true)
+
+    if [ -n "$git_name" ] && [ -n "$git_email" ]; then
+        log_success "Git identity: $git_name <$git_email>"
+        return 0
+    fi
+
+    log_info "Git identity is needed to author commits in your workspace."
+
+    local global_name global_email
+    global_name=$(git config --global user.name 2>/dev/null || true)
+    global_email=$(git config --global user.email 2>/dev/null || true)
+
+    local input_name input_email
+    if [ -n "$global_name" ]; then
+        input_name=$(read_tty "  Git user name [$global_name]: " "$global_name")
+    else
+        input_name=$(read_tty "  Git user name: " "")
+    fi
+    if [ -n "$global_email" ]; then
+        input_email=$(read_tty "  Git email [$global_email]: " "$global_email")
+    else
+        input_email=$(read_tty "  Git email: " "")
+    fi
+
+    if [ -n "$input_name" ]; then
+        git -C "$WORKSPACE_DIR" config user.name "$input_name"
+        log_success "Set git user.name: $input_name"
+    fi
+    if [ -n "$input_email" ]; then
+        git -C "$WORKSPACE_DIR" config user.email "$input_email"
+        log_success "Set git user.email: $input_email"
+    fi
+
+    if [ -z "$input_name" ] || [ -z "$input_email" ]; then
+        log_warn "Git identity incomplete — commits may fail until configured"
+        log_info "  git -C $WORKSPACE_DIR config user.name \"Your Name\""
+        log_info "  git -C $WORKSPACE_DIR config user.email \"you@example.com\""
+    fi
+}
+
 # Setup the kit
 setup_kit() {
     log_step "Installing Multi-Agent Kit"
@@ -232,9 +300,9 @@ setup_kit() {
     mkdir -p "$WORKSPACE_DIR"
     cd "$WORKSPACE_DIR"
     
-    # Init git if needed  
+    # Init git if it wasn't set up earlier (e.g., user skipped setup_git)
     if [ ! -d ".git" ]; then
-        git init
+        git init -q
         log_success "Initialized git repository"
     fi
     
@@ -301,6 +369,7 @@ main() {
         exit 0
     fi
     
+    setup_git
     setup_kit
     run_bootstrap
     

@@ -178,32 +178,128 @@ check_prereqs() {
         log_info "If your workspace is in a different location, pass: --workspace PATH"
         exit 1
     fi
+    log_success "Workspace directory found: $WORKSPACE_DIR"
 
-    if [ ! -d "$WORKSPACE_DIR/.git" ]; then
-        log_warn "No git repository found in $WORKSPACE_DIR"
+    log_success "All prerequisites met"
+}
 
-        local reply=""
-        if [ -t 0 ]; then
-            read -p "Initialize git repository here? [Y/n] " -n 1 -r reply
-            echo
-        elif [ -r /dev/tty ]; then
-            printf "Initialize git repository here? [Y/n] " >&2
-            read -r reply < /dev/tty
+# ─── Input helper ─────────────────────────────────────────────────────────────
+
+read_tty() {
+    local prompt="$1"
+    local default="${2:-}"
+    local input=""
+
+    printf "%s" "$prompt" >&2
+
+    if [ -t 0 ]; then
+        IFS= read -r input
+    elif [ -r /dev/tty ]; then
+        IFS= read -r input < /dev/tty
+    fi
+
+    input="${input%$'\n'}"
+    if [ -z "$input" ] && [ -n "$default" ]; then
+        input="$default"
+    fi
+
+    printf "%s" "$input"
+}
+
+confirm() {
+    local prompt="$1"
+    local default="${2:-n}"
+    local yn="[y/N]"
+
+    if [ "$default" = "y" ]; then
+        yn="[Y/n]"
+    fi
+
+    local input
+    input=$(read_tty "$prompt $yn " "")
+
+    if [ -z "$input" ]; then
+        input="$default"
+    fi
+
+    [[ "$input" =~ ^[Yy]$ ]]
+}
+
+# ─── Git setup ────────────────────────────────────────────────────────────────
+
+setup_git() {
+    log_step "Git Setup"
+
+    if $DRY_RUN; then
+        if [ -d "$WORKSPACE_DIR/.git" ]; then
+            log_dry "Would confirm: Use existing git repository at $WORKSPACE_DIR"
+        else
+            log_dry "Would prompt: Initialize a git repository in $WORKSPACE_DIR"
         fi
+        log_dry "Would check/prompt for git user identity (user.name, user.email)"
+        return 0
+    fi
 
-        if [[ -z "$reply" || "$reply" =~ ^[Yy]$ ]]; then
-            git -C "$WORKSPACE_DIR" init
-            log_success "Git repository initialized"
+    if [ -d "$WORKSPACE_DIR/.git" ]; then
+        log_success "Existing git repository found: $WORKSPACE_DIR"
+        if ! confirm "Use this repository for workspace management?" "y"; then
+            log_info "Aborted — a git repository is required for workspace management"
+            exit 0
+        fi
+    else
+        log_info "No git repository in $WORKSPACE_DIR"
+        if confirm "Initialize a git repository to manage your workspaces?" "y"; then
+            git -C "$WORKSPACE_DIR" init -q
+            log_success "Initialized git repository"
         else
             log_error "Git repository is required. Initialize manually:"
             log_info "  cd $WORKSPACE_DIR && git init"
             exit 1
         fi
-    else
-        log_success "Git repository found: $WORKSPACE_DIR"
     fi
 
-    log_success "All prerequisites met"
+    # Check git identity (local repo config, then global fallback)
+    local git_name git_email
+    git_name=$(git -C "$WORKSPACE_DIR" config user.name 2>/dev/null || true)
+    git_email=$(git -C "$WORKSPACE_DIR" config user.email 2>/dev/null || true)
+
+    if [ -n "$git_name" ] && [ -n "$git_email" ]; then
+        log_success "Git identity: $git_name <$git_email>"
+        return 0
+    fi
+
+    log_info "Git identity is needed to author commits in your workspace."
+
+    local global_name global_email
+    global_name=$(git config --global user.name 2>/dev/null || true)
+    global_email=$(git config --global user.email 2>/dev/null || true)
+
+    local input_name input_email
+    if [ -n "$global_name" ]; then
+        input_name=$(read_tty "  Git user name [$global_name]: " "$global_name")
+    else
+        input_name=$(read_tty "  Git user name: " "")
+    fi
+    if [ -n "$global_email" ]; then
+        input_email=$(read_tty "  Git email [$global_email]: " "$global_email")
+    else
+        input_email=$(read_tty "  Git email: " "")
+    fi
+
+    if [ -n "$input_name" ]; then
+        git -C "$WORKSPACE_DIR" config user.name "$input_name"
+        log_success "Set git user.name: $input_name"
+    fi
+    if [ -n "$input_email" ]; then
+        git -C "$WORKSPACE_DIR" config user.email "$input_email"
+        log_success "Set git user.email: $input_email"
+    fi
+
+    if [ -z "$input_name" ] || [ -z "$input_email" ]; then
+        log_warn "Git identity incomplete — commits may fail until configured"
+        log_info "  git -C $WORKSPACE_DIR config user.name \"Your Name\""
+        log_info "  git -C $WORKSPACE_DIR config user.email \"you@example.com\""
+    fi
 }
 
 # ─── Layout detection ─────────────────────────────────────────────────────────
@@ -569,46 +665,36 @@ git_commit() {
     log_info "Git Commit"
     log_info "----------"
 
-    local reply=""
-    if [ -t 0 ]; then
-        read -p "Create git commit for these changes? [Y/n] " -n 1 -r reply
-        echo
-    elif [ -r /dev/tty ]; then
-        printf "Create git commit for these changes? [Y/n] " >&2
-        read -r reply < /dev/tty
+    if ! confirm "Create git commit for these changes?" "y"; then
+        log_info "Skipped. Commit manually when ready:"
+        log_info "  cd $WORKSPACE_DIR && git add -A && git commit -m '[kit] Add openclaw-multiagent kit'"
+        return 0
     fi
 
-    # Default to yes
-    if [[ -z "$reply" || "$reply" =~ ^[Yy]$ ]]; then
-        local git_name git_email
-        git_name=$(git config user.name 2>/dev/null || true)
-        git_email=$(git config user.email 2>/dev/null || true)
+    # Identity should have been configured in setup_git; verify as a safety net
+    local git_name git_email
+    git_name=$(git -C "$WORKSPACE_DIR" config user.name 2>/dev/null || true)
+    git_email=$(git -C "$WORKSPACE_DIR" config user.email 2>/dev/null || true)
 
-        if [ -z "$git_name" ] || [ -z "$git_email" ]; then
-            log_warn "Git identity not configured — cannot commit."
-            log_info "Set your identity and commit manually:"
-            log_info "  git config user.name \"Your Name\""
-            log_info "  git config user.email \"you@example.com\""
-            log_info "  cd $WORKSPACE_DIR && git add -A && git commit -m '[kit] Add openclaw-multiagent kit'"
-            return 0
-        fi
+    if [ -z "$git_name" ] || [ -z "$git_email" ]; then
+        log_warn "Git identity not configured — cannot commit."
+        log_info "  git -C $WORKSPACE_DIR config user.name \"Your Name\""
+        log_info "  git -C $WORKSPACE_DIR config user.email \"you@example.com\""
+        return 0
+    fi
 
-        cd "$WORKSPACE_DIR"
-        git add -A
+    cd "$WORKSPACE_DIR"
+    git add -A
 
-        if git diff --cached --quiet; then
-            log_info "Nothing new to commit (workspace already up to date)"
-        else
-            git commit -m "[kit] Add openclaw-multiagent kit
+    if git diff --cached --quiet; then
+        log_info "Nothing new to commit (workspace already up to date)"
+    else
+        git commit -m "[kit] Add openclaw-multiagent kit
 
 - Added kit submodule (openclaw-multiagent)
 - Created shared/skills/ symlinks
 - Registered skills via skills.load.extraDirs in openclaw.json"
-            log_success "Changes committed"
-        fi
-    else
-        log_info "Skipped. Commit manually when ready:"
-        log_info "  cd $WORKSPACE_DIR && git add -A && git commit -m '[kit] Add openclaw-multiagent kit'"
+        log_success "Changes committed"
     fi
 }
 
@@ -632,6 +718,7 @@ main() {
     echo
 
     check_prereqs
+    setup_git
 
     # Detect workspace layout
     log_step "Scanning Workspace"

@@ -127,14 +127,55 @@ check_prereqs() {
         echo
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
             cd "$WORKSPACE_DIR"
-            git init
+            git init -q
             log_success "Git repo initialized"
         else
             log_error "Git is required for workspace management"
             exit 1
         fi
     fi
-    
+
+    # Ensure git identity is configured (may already be set by install.sh)
+    local git_name git_email
+    git_name=$(git -C "$WORKSPACE_DIR" config user.name 2>/dev/null || true)
+    git_email=$(git -C "$WORKSPACE_DIR" config user.email 2>/dev/null || true)
+
+    if [ -z "$git_name" ] || [ -z "$git_email" ]; then
+        log_info "Git identity is needed to author commits in your workspace."
+
+        local global_name global_email
+        global_name=$(git config --global user.name 2>/dev/null || true)
+        global_email=$(git config --global user.email 2>/dev/null || true)
+
+        if [ -t 0 ]; then
+            local input_name input_email
+            read -p "  Git user name${global_name:+ [$global_name]}: " input_name
+            input_name="${input_name:-$global_name}"
+            read -p "  Git email${global_email:+ [$global_email]}: " input_email
+            input_email="${input_email:-$global_email}"
+        elif [ -r /dev/tty ]; then
+            local input_name input_email
+            printf "  Git user name%s: " "${global_name:+ [$global_name]}" >&2
+            read -r input_name < /dev/tty
+            input_name="${input_name:-$global_name}"
+            printf "  Git email%s: " "${global_email:+ [$global_email]}" >&2
+            read -r input_email < /dev/tty
+            input_email="${input_email:-$global_email}"
+        else
+            input_name="$global_name"
+            input_email="$global_email"
+        fi
+
+        [ -n "$input_name" ] && git -C "$WORKSPACE_DIR" config user.name "$input_name" && log_success "Set git user.name: $input_name"
+        [ -n "$input_email" ] && git -C "$WORKSPACE_DIR" config user.email "$input_email" && log_success "Set git user.email: $input_email"
+
+        if [ -z "$input_name" ] || [ -z "$input_email" ]; then
+            log_warn "Git identity incomplete — commits may fail until configured"
+        fi
+    else
+        log_success "Git identity: $git_name <$git_email>"
+    fi
+
     log_success "Prerequisites OK"
 }
 
@@ -446,17 +487,15 @@ EOF
 
     # Default to yes
     if [[ -z "$reply" || "$reply" =~ ^[Yy]$ ]]; then
-        # Verify git identity before attempting commit
+        # Identity should have been configured in check_prereqs; verify as a safety net
         local git_name git_email
-        git_name=$(git config user.name 2>/dev/null || true)
-        git_email=$(git config user.email 2>/dev/null || true)
+        git_name=$(git -C "$WORKSPACE_DIR" config user.name 2>/dev/null || true)
+        git_email=$(git -C "$WORKSPACE_DIR" config user.email 2>/dev/null || true)
 
         if [ -z "$git_name" ] || [ -z "$git_email" ]; then
             log_warn "Git identity not configured — cannot commit."
-            log_info "Set your identity and commit manually:"
-            log_info "  git config user.name \"Your Name\""
-            log_info "  git config user.email \"you@example.com\""
-            log_info "  cd $WORKSPACE_DIR && git add -A && git commit -m '[init] Bootstrap agent workspace'"
+            log_info "  git -C $WORKSPACE_DIR config user.name \"Your Name\""
+            log_info "  git -C $WORKSPACE_DIR config user.email \"you@example.com\""
             return 0
         fi
 
