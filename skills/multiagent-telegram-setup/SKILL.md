@@ -223,6 +223,103 @@ If it doesn't respond:
 | `match.channel` | Yes | Channel type (e.g., `telegram`) |
 | `match.accountId` | Yes | Telegram account ID |
 
+## Forum Groups (Threads)
+
+Telegram **forum supergroups** have multiple topic threads. OpenClaw treats each topic as a separate session automatically — but you need to configure the group to enable thread memory.
+
+> **Important:** This only works with Telegram **forum supergroups** (`is_forum: true`). Regular groups with reply threads do NOT get separate sessions — OpenClaw intentionally ignores `message_thread_id` for non-forum groups, because reply threads in regular groups are not persistent topics. All messages in a regular group share one session key.
+>
+> To use topic threads, your Telegram group must have **Topics** enabled: Group Settings → Topics → Enable.
+
+### How It Works
+
+- Each forum topic gets its own session key and JSONL transcript in OpenClaw
+- The agent workspace's `threads/` directory holds long-term memory per thread
+- On session start, the agent identifies its thread and loads thread-specific memory
+
+### Step 1: Enable the Bot in Your Forum Group
+
+1. Add your bot to the Telegram forum group
+2. Promote it to admin (needed to read messages in topics)
+3. Find your group's chat ID (use `@userinfobot` or check gateway logs)
+
+### Step 2: Add Group to allowGroups in openclaw.json
+
+Add the group to your Telegram account config:
+
+```json
+"channels": {
+  "telegram": {
+    "accounts": {
+      "your_bot": {
+        "enabled": true,
+        "botToken": "<token>",
+        "allowFrom": [<your-user-id>],
+        "groupPolicy": "allowlist",
+        "allowGroups": [-1001234567890],
+        "streaming": "partial",
+        "groups": {
+          "-1001234567890": {
+            "systemPrompt": "You are in a Telegram forum group. Each topic thread is a separate long-running conversation with its own memory. Follow the Thread Memory Protocol in BOOT.md."
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Step 3: Inject Session Keys via Per-Topic System Prompts
+
+This is the critical step for thread memory. Each topic's system prompt injects its session key so the agent can find its memory folder deterministically — no guessing required:
+
+```json
+"groups": {
+  "-1001234567890": {
+    "systemPrompt": "You are in a Telegram forum group. Each topic thread is a separate long-running conversation with its own memory. Follow the Thread Memory Protocol in BOOT.md.",
+    "topics": {
+      "123": {
+        "systemPrompt": "SESSION_KEY: agent:main:telegram:your_bot:group:-1001234567890:topic:123\nTopic: Health & Fitness"
+      },
+      "456": {
+        "systemPrompt": "SESSION_KEY: agent:main:telegram:your_bot:group:-1001234567890:topic:456\nTopic: Home Renovation"
+      }
+    }
+  }
+}
+```
+
+The agent reads `SESSION_KEY` from the system prompt, sanitizes it (`:` → `-`, strip leading `-` from chat ID), and uses it directly as its thread folder path: `threads/{session-key}/MEMORY.md`.
+
+**Session key format:**
+```
+agent:{agentId}:telegram:{accountId}:group:{chatId}:topic:{topicId}
+```
+
+**Sanitized folder name** (replace `:` with `-`, strip leading `-` from negative chat IDs):
+```
+agent-main-telegram-your_bot-group-1001234567890-topic-123
+```
+
+### Step 4: Initialize Thread Folders
+
+When the agent first encounters a new thread topic, it creates the thread folder automatically. You can also pre-create them:
+
+```bash
+mkdir -p <workspace>/threads/agent-main-telegram-your_bot-group-1001234567890-topic-123
+# Then create MEMORY.md from the template in threads/README.md
+```
+
+### Finding Group and Topic IDs
+
+**Group chat ID:** Check OpenClaw gateway logs when a message arrives from the group. Look for `chatId` or the peer id in the routing output.
+
+**Topic IDs:** Check gateway logs for `messageThreadId` or `resolvedThreadId` when a message arrives from a specific topic.
+
+**Tip:** Send a test message to each topic and check gateway logs immediately — you'll see the full session key being assigned. Copy it directly into your `openclaw.json` topic config.
+
+---
+
 ## Common Patterns
 
 ### Multiple Bots, Same Agent

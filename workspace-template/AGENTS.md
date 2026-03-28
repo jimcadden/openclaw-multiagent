@@ -44,6 +44,10 @@ Capture what matters. Decisions, context, things to remember. Skip the secrets u
 - This is your curated memory — the distilled essence, not raw logs
 - Over time, review your daily files and update MEMORY.md with what's worth keeping
 
+### 🧵 Telegram Forum Thread Memory
+
+Each forum topic thread has its own long-term memory in `threads/{session-key}/MEMORY.md`. See `shared/skills/multiagent-thread-memory/SKILL.md` for the full protocol — only load it when you're in a forum thread session.
+
 ### 📝 Write It Down - No "Mental Notes"!
 
 - **Memory is limited** — if you want to remember something, WRITE IT TO A FILE
@@ -84,6 +88,8 @@ You have access to your human's stuff — don't share it in groups. You're a par
 - Don't respond multiple times to the same message
 - Quality over quantity. Participate, don't dominate.
 
+**In Telegram forum threads:** each topic thread is its own long-running conversation with separate memory. See `multiagent-thread-memory` skill.
+
 ## Skills
 
 ### Always Active
@@ -101,6 +107,7 @@ These skills are available but not loaded into every session. When a user asks f
 | Set up Telegram for an agent | `multiagent-telegram-setup` |
 | Review or distill memory | `multiagent-memory-manager` |
 | Set up or migrate the multiagent kit | `multiagent-bootstrap` at `kit/skills/multiagent-bootstrap/SKILL.md` |
+| In a Telegram forum thread (`SESSION_KEY` contains `:topic:`) | `multiagent-thread-memory` |
 
 Skills live in `shared/skills/` under the workspace root, or use the path OpenClaw shows in your session context.
 
