@@ -40,8 +40,9 @@ python3 {baseDir}/scripts/setup-telegram-agent.py
 This will:
 1. Copy `workspace.template` to create your agent
 2. Generate config snippets for `openclaw.json`
-3. Guide you through Telegram bot creation
-4. Remind you to commit the new workspace to git
+3. Auto-detect your sender ID from existing Telegram accounts in the config
+4. Guide you through Telegram bot creation
+5. Remind you to commit the new workspace to git
 
 ## Manual Workflow
 
@@ -93,6 +94,8 @@ Open `~/.openclaw/openclaw.json` and add three sections:
 
 #### 3b. Add Telegram Account to `channels.telegram.accounts`
 
+> **Tip — reuse your existing sender ID:** If you already have a Telegram account configured (e.g., `default`), check its `allowFrom` array for your user ID and reuse the same value. This ensures the new bot only accepts DMs from you (1-to-1 pairing). If you don't have one yet, message `@userinfobot` on Telegram to get your numeric user ID.
+
 ```json
 "channels": {
   "telegram": {
@@ -121,7 +124,7 @@ Open `~/.openclaw/openclaw.json` and add three sections:
 - `enabled`: `true` to activate this account
 - `dmPolicy`: `pairing` routes based on bindings, `allowlist` uses `allowFrom`
 - `botToken`: From BotFather
-- `allowFrom`: Array of Telegram user IDs allowed to message this bot
+- `allowFrom`: Array of Telegram user IDs allowed to message this bot. **Check existing accounts in your config for a sender ID to reuse.**
 - `streaming`: `off`, `partial`, or `full`
 
 #### 3c. Add Binding

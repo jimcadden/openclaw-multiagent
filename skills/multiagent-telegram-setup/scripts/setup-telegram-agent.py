@@ -161,7 +161,23 @@ def step_agent_config(bot_token):
     }
 
 
-def step_channel_config(agent_config):
+def detect_existing_sender_ids(config):
+    """Look for allowFrom sender IDs already configured in Telegram accounts."""
+    sender_ids = set()
+    if not config:
+        return sorted(sender_ids)
+    try:
+        accounts = config.get("channels", {}).get("telegram", {}).get("accounts", {})
+        for acct in accounts.values():
+            for uid in acct.get("allowFrom", []):
+                if isinstance(uid, int) and uid > 0:
+                    sender_ids.add(uid)
+    except (AttributeError, TypeError):
+        pass
+    return sorted(sender_ids)
+
+
+def step_channel_config(agent_config, config):
     """Step 3: Telegram channel configuration."""
     print("\n" + "="*60)
     print("STEP 3: Telegram Channel Configuration")
@@ -172,14 +188,34 @@ def step_channel_config(agent_config):
         default=f"{agent_config['agent_id']}_bot"
     )
     
-    # AllowFrom - who can message this bot
+    # AllowFrom - detect existing sender IDs from config
+    existing_ids = detect_existing_sender_ids(config)
+    
     print("\nWho should be allowed to message this bot?")
-    print("Your user ID: YOUR_TELEGRAM_USER_ID")
+    if existing_ids:
+        ids_str = ", ".join(str(uid) for uid in existing_ids)
+        print(f"  Found existing sender ID(s) in config: {ids_str}")
+        allow_from_default = ids_str
+    else:
+        print("  No existing sender IDs found in config.")
+        print("  To find your Telegram user ID, message @userinfobot on Telegram.")
+        allow_from_default = None
+    
     allow_from_input = get_user_input(
         "Allowed sender IDs (comma-separated)",
-        default="YOUR_TELEGRAM_USER_ID"
+        default=allow_from_default
     )
-    allow_from = [int(x.strip()) for x in allow_from_input.split(",") if x.strip()]
+    
+    try:
+        allow_from = [int(x.strip()) for x in allow_from_input.split(",") if x.strip()]
+    except ValueError:
+        print("⚠️  Could not parse sender IDs. Please enter numeric IDs separated by commas.")
+        allow_from = []
+    
+    if not allow_from:
+        print("⚠️  No valid sender IDs provided. The bot will not accept DMs from anyone.")
+        if not yes_no("Continue without sender IDs?", default=False):
+            return step_channel_config(agent_config, config)
     
     # DM policy
     print("\nDM Policy options:")
@@ -322,14 +358,16 @@ This script will create a basic single-agent workspace.
     if not yes_no("Continue?"):
         sys.exit(0)
     
+    config = load_config()
+    
     # Step 1: Telegram bot
     bot_token = step_telegram_bot()
     
     # Step 2: Agent config
     agent_config = step_agent_config(bot_token)
     
-    # Step 3: Channel config
-    channel_config = step_channel_config(agent_config)
+    # Step 3: Channel config (pass config so we can detect existing sender IDs)
+    channel_config = step_channel_config(agent_config, config)
     
     # Step 4: Generate snippets
     generate_config_snippets(agent_config, channel_config)
