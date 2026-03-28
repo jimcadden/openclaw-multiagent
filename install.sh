@@ -303,7 +303,6 @@ main() {
     echo
     log_success "Installation complete!"
     log_info "Agent workspace: $WORKSPACE_DIR/$AGENT_NAME"
-    log_info "Restart OpenClaw: openclaw gateway restart"
 }
 
 main "$@"

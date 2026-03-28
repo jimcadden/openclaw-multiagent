@@ -144,7 +144,7 @@ setup_shared() {
     
     if $DRY_RUN; then
         log_dry "Would create: $WORKSPACE_DIR/shared/skills"
-        for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-remove-agent multiagent-memory-manager; do
+        for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-remove-agent multiagent-memory-manager multiagent-thread-memory; do
             log_dry "Would symlink: $WORKSPACE_DIR/shared/skills/$skill -> $KIT_DIR/skills/$skill"
         done
         return 0
@@ -153,7 +153,7 @@ setup_shared() {
     mkdir -p "$WORKSPACE_DIR/shared/skills"
     
     # Symlink shared skills
-    for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-remove-agent multiagent-memory-manager; do
+    for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-remove-agent multiagent-memory-manager multiagent-thread-memory; do
         if [ ! -L "$WORKSPACE_DIR/shared/skills/$skill" ]; then
             ln -s "$KIT_DIR/skills/$skill" "$WORKSPACE_DIR/shared/skills/$skill"
             log_success "Linked $skill"
@@ -379,6 +379,28 @@ prompt_telegram() {
     fi
 }
 
+# Gateway restart
+restart_gateway() {
+    if $DRY_RUN; then
+        log_dry "Would restart OpenClaw gateway to load new skills"
+        return 0
+    fi
+
+    if ! command -v openclaw &> /dev/null; then
+        log_warn "openclaw CLI not found — restart the gateway manually:"
+        log_info "  openclaw gateway restart"
+        return 0
+    fi
+
+    log_info "Restarting OpenClaw gateway to load multiagent skills..."
+    if openclaw gateway restart 2>/dev/null; then
+        log_success "Gateway restarted — multiagent skills are now available"
+    else
+        log_warn "Gateway restart failed — restart manually:"
+        log_info "  openclaw gateway restart"
+    fi
+}
+
 # Initial git commit
 git_commit() {
     if $DRY_RUN; then
@@ -473,6 +495,7 @@ main() {
     update_openclaw_config
     prompt_telegram
     git_commit
+    restart_gateway
     
     echo
     if $DRY_RUN; then
@@ -487,9 +510,8 @@ main() {
         echo "║  Bootstrap Complete!                                   ║"
         echo "╠════════════════════════════════════════════════════════╣"
         echo "║  Next steps:                                           ║"
-        echo "║    1. Restart OpenClaw: openclaw gateway restart       ║"
-        echo "║    2. Verify agent: openclaw status                    ║"
-        echo "║    3. Start chatting!                                  ║"
+        echo "║    1. Verify agent: openclaw status                    ║"
+        echo "║    2. Start chatting!                                  ║"
         echo "║                                                        ║"
         echo "║  Add more agents:                                      ║"
         echo "║    ./kit/scripts/add-agent.sh [agent-name]             ║"

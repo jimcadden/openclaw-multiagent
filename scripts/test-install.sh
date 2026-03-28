@@ -562,7 +562,7 @@ if should_run "migrate_shared_skills_set"; then
     init_workspace_git "$TMP_WORKSPACE"
     make_agent_dir "$TMP_WORKSPACE" "myagent"
     run_migrate --dry-run --workspace "$TMP_WORKSPACE" --openclaw-dir "$TMP_OC_DIR"
-    for expected_skill in multiagent-add-agent multiagent-remove-agent multiagent-memory-manager multiagent-state-manager multiagent-telegram-setup; do
+    for expected_skill in multiagent-add-agent multiagent-remove-agent multiagent-memory-manager multiagent-state-manager multiagent-telegram-setup multiagent-thread-memory; do
         if out_contains "$expected_skill"; then
             pass "migrate_shared_skills_set: $expected_skill included"
         else

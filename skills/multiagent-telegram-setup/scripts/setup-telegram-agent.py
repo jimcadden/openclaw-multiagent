@@ -18,9 +18,21 @@ from pathlib import Path
 CONFIG_PATH = Path.home() / ".openclaw" / "openclaw.json"
 AGENTS_DIR = Path.home() / ".openclaw" / "agents"
 
-# Detect if running in multi-agent workspace mode
-MULTI_AGENT_WORKSPACE = Path.home() / "workspaces"
-WORKSPACE_TEMPLATE = MULTI_AGENT_WORKSPACE / "workspace.template"
+# Detect if running in multi-agent workspace mode.
+# Prefer WORKSPACE_DIR env var (set by setup.sh / migrate.sh / install.sh),
+# then try inferring from this script's location inside kit/.
+_env_workspace = os.environ.get("WORKSPACE_DIR")
+if _env_workspace:
+    MULTI_AGENT_WORKSPACE = Path(_env_workspace)
+else:
+    _script_dir = Path(__file__).resolve().parent
+    _inferred = _script_dir.parents[3]  # kit/skills/<skill>/scripts -> workspace
+    if (_inferred / "kit" / "workspace-template").is_dir():
+        MULTI_AGENT_WORKSPACE = _inferred
+    else:
+        MULTI_AGENT_WORKSPACE = Path.home() / "workspaces"
+
+WORKSPACE_TEMPLATE = MULTI_AGENT_WORKSPACE / "kit" / "workspace-template"
 IS_MULTI_AGENT = MULTI_AGENT_WORKSPACE.exists() and WORKSPACE_TEMPLATE.exists()
 
 if IS_MULTI_AGENT:
@@ -243,7 +255,7 @@ def step_create_directories(agent_config):
     
     if IS_MULTI_AGENT:
         print(f"📁 Multi-agent workspace detected: {MULTI_AGENT_WORKSPACE}")
-        print(f"📋 Copying workspace.template to: {workspace}")
+        print(f"📋 Copying workspace-template to: {workspace}")
         
         if yes_no("Create workspace from template?"):
             import shutil
@@ -284,7 +296,7 @@ def main():
 📁 Multi-agent workspace: {MULTI_AGENT_WORKSPACE}
 
 This script will:
-1. Copy workspace.template to create your new agent
+1. Copy workspace-template to create your new agent
 2. Configure Telegram bot routing in openclaw.json
 3. Set up the workspace with shared skills linked
 

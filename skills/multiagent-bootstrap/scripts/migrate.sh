@@ -422,7 +422,7 @@ setup_shared_skills() {
 
     if $DRY_RUN; then
         log_dry "Would create: $WORKSPACE_DIR/shared/skills/"
-        for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-remove-agent multiagent-memory-manager; do
+        for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-remove-agent multiagent-memory-manager multiagent-thread-memory; do
             log_dry "Would symlink: shared/skills/$skill -> ../../kit/skills/$skill"
         done
         return 0
@@ -437,7 +437,7 @@ setup_shared_skills() {
     done
 
     # Remove and recreate to ensure correct target
-    for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-remove-agent multiagent-memory-manager; do
+    for skill in multiagent-state-manager multiagent-telegram-setup multiagent-add-agent multiagent-remove-agent multiagent-memory-manager multiagent-thread-memory; do
         [ -L "$skill" ] && rm -f "$skill"
         ln -s "../../kit/skills/$skill" "$skill"
         log_success "Linked shared/skills/$skill"
@@ -524,6 +524,31 @@ except Exception as e:
 EOF
 
     log_success "skills.load.extraDirs configured"
+}
+
+# ─── Gateway restart ──────────────────────────────────────────────────────
+
+restart_gateway() {
+    log_step "Gateway Restart"
+
+    if $DRY_RUN; then
+        log_dry "Would restart OpenClaw gateway to load new skills"
+        return 0
+    fi
+
+    if ! command -v openclaw &> /dev/null; then
+        log_warn "openclaw CLI not found — restart the gateway manually:"
+        log_info "  openclaw gateway restart"
+        return 0
+    fi
+
+    log_info "Restarting OpenClaw gateway to load multiagent skills..."
+    if openclaw gateway restart 2>/dev/null; then
+        log_success "Gateway restarted — multiagent skills are now available"
+    else
+        log_warn "Gateway restart failed — restart manually:"
+        log_info "  openclaw gateway restart"
+    fi
 }
 
 # ─── Git commit ───────────────────────────────────────────────────────────────
@@ -670,6 +695,7 @@ main() {
 
     update_skills_config
     git_commit
+    restart_gateway
 
     echo
     if $DRY_RUN; then
@@ -687,7 +713,6 @@ main() {
         echo "║    1. Verify: bash kit/skills/multiagent-kit-guide/    ║"
         echo "║              scripts/check-setup.sh                    ║"
         echo "║    2. Push:   git push origin main                     ║"
-        echo "║    3. Restart: openclaw gateway restart                ║"
         echo "╚════════════════════════════════════════════════════════╝"
     fi
     echo
