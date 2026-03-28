@@ -89,6 +89,10 @@ else
     log_success "Kit updated to $target_version"
 fi
 
+cd "$WORKSPACE_DIR"
+echo "$target_version" > .kit-version
+log_success "Wrote .kit-version ($target_version)"
+
 # ─── Re-sync shared/skills symlinks ─────────────────────────────────────
 
 cd "$WORKSPACE_DIR"

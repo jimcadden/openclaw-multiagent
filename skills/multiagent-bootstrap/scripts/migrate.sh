@@ -413,6 +413,11 @@ setup_kit() {
         log_warn "No release tags found — using current HEAD"
     fi
     cd "$WORKSPACE_DIR"
+
+    # Write version file for agent boot sequence
+    local kit_version="${LATEST_TAG:-$(git -C "$KIT_DIR" rev-parse --short HEAD)}"
+    echo "$kit_version" > .kit-version
+    log_success "Wrote .kit-version ($kit_version)"
 }
 
 # ─── Shared skills ────────────────────────────────────────────────────────────

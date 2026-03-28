@@ -254,6 +254,10 @@ setup_kit() {
     fi
     cd ..
     
+    # Write version file for agent boot sequence
+    local kit_version="${LATEST_TAG:-$(git -C kit rev-parse --short HEAD)}"
+    echo "$kit_version" > .kit-version
+    
     export WORKSPACE_DIR
     export KIT_DIR="$WORKSPACE_DIR/kit"
     export OPENCLAW_DIR
