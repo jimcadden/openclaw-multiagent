@@ -76,16 +76,22 @@ def save_config(config):
 
 def get_user_input(prompt, default=None):
     """Get user input with optional default."""
-    if default:
-        response = input(f"{prompt} [{default}]: ").strip()
-        return response if response else default
-    return input(f"{prompt}: ").strip()
+    try:
+        if default:
+            response = input(f"{prompt} [{default}]: ").strip()
+            return response if response else default
+        return input(f"{prompt}: ").strip()
+    except EOFError:
+        return default or ""
 
 
 def yes_no(prompt, default=True):
     """Get yes/no input."""
     default_str = "Y/n" if default else "y/N"
-    response = input(f"{prompt} [{default_str}]: ").strip().lower()
+    try:
+        response = input(f"{prompt} [{default_str}]: ").strip().lower()
+    except EOFError:
+        return default
     if not response:
         return default
     return response in ("y", "yes")

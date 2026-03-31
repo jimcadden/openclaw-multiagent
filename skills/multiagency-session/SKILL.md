@@ -55,7 +55,7 @@ HEARTBEAT.md         — pending periodic tasks
 
 ## 4. Kit Version
 
-Read `.kit-version` in your workspace root and include it in your first response.
+Read `../.kit-version` (one level up from your agent folder, in the shared workspace root where `kit/` lives) and include the version in your first response.
 
 ## 5. Check Workspace State
 
