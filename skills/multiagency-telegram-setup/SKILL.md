@@ -7,6 +7,13 @@ user-invocable: true
 
 # Telegram Agent Setup
 
+## Sandbox Warning
+
+Scripts in this skill write to `~/.openclaw/openclaw.json`, which is outside the agent sandbox boundary.
+
+- **`mode: "non-main"` (default):** main sessions are not sandboxed — no action needed.
+- **`mode: "all"`:** enable elevated exec (`tools.elevated.enabled: true`) and run `/elevated on` before executing.
+
 ## Overview
 
 This skill provides the complete workflow for creating a new OpenClaw agent in a **multi-agent workspace** and configuring it to receive messages from a dedicated Telegram bot.
@@ -43,6 +50,34 @@ This will:
 3. Auto-detect your sender ID from existing Telegram accounts in the config
 4. Guide you through Telegram bot creation
 5. Remind you to commit the new workspace to git
+
+## Add Telegram Group
+
+Configure an existing agent to receive messages from a dedicated Telegram group:
+
+```bash
+{baseDir}/scripts/setup-telegram-group.sh
+```
+
+Or with arguments:
+
+```bash
+{baseDir}/scripts/setup-telegram-group.sh --agent <agent-id> --account <account-id> --group <chat-id>
+```
+
+The script will:
+1. Select the agent and its Telegram account (auto-detects if only one binding exists)
+2. Add the group to `channels.telegram.groups` with `requireMention: false` and `groupPolicy: "open"`
+3. Set account-level `groupPolicy: "allowlist"` and update `allowFrom` / `groupAllowFrom` with your sender ID
+4. Write the config directly to `openclaw.json`
+
+After running, add the bot to the Telegram group, promote it to admin, then restart:
+
+```bash
+openclaw gateway restart
+```
+
+If the bot misses messages, disable privacy mode in BotFather (`/setprivacy` -> Disable), then remove and re-add the bot to the group.
 
 ## Manual Workflow
 
