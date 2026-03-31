@@ -7,6 +7,13 @@ description: Guide for using and maintaining the openclaw-multiagency kit. Quick
 
 Quick reference for working with the `openclaw-multiagency` kit.
 
+## Sandbox Warning
+
+`update-kit.sh` writes `.kit-version` and re-syncs symlinks at the shared workspace root, which is outside the agent sandbox boundary.
+
+- **`mode: "non-main"` (default):** main sessions are not sandboxed — no action needed.
+- **`mode: "all"`:** enable elevated exec (`tools.elevated.enabled: true`) and run `/elevated on` before executing.
+
 ## Quick Commands
 
 ### Update Kit to New Version

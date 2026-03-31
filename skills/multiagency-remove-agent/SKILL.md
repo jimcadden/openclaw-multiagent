@@ -9,6 +9,13 @@ user-invocable: true
 
 Safely removes an agent from the workspace. Archives the agent directory by default to prevent accidental data loss.
 
+## Sandbox Warning
+
+This script writes to `~/.openclaw/openclaw.json` and modifies directories at the shared workspace root. Both are outside the agent sandbox boundary.
+
+- **`mode: "non-main"` (default):** main sessions are not sandboxed — no action needed.
+- **`mode: "all"`:** enable elevated exec (`tools.elevated.enabled: true`) and run `/elevated on` before executing.
+
 ## Run
 
 ```bash

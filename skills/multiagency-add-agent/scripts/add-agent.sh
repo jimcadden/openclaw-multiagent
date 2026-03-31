@@ -164,12 +164,23 @@ update_config() {
         exit 1
     fi
 
+    echo
+    log_info "Sandbox mode for this agent:"
+    log_info "  inherit — follows agents.defaults.sandbox.mode (non-main sessions are sandboxed by default)"
+    log_info "  off     — this agent is never sandboxed, regardless of global defaults"
+    local SANDBOX_CHOICE
+    SANDBOX_CHOICE=$(read_tty "Sandbox mode [inherit/off]: " "inherit")
+    if [[ "$SANDBOX_CHOICE" != "off" ]]; then
+        SANDBOX_CHOICE="inherit"
+    fi
+
     python3 << EOF
 import json, sys
 
 config_file = "$CONFIG_FILE"
 agent_id = "$AGENT_NAME"
 workspace = "$WORKSPACE_DIR/$AGENT_NAME"
+sandbox_mode = "$SANDBOX_CHOICE"
 
 try:
     with open(config_file, 'r') as f:
@@ -185,12 +196,17 @@ try:
         print(f"Agent '{agent_id}' already in openclaw.json")
         sys.exit(0)
 
-    config['agents']['list'].append({'id': agent_id, 'workspace': workspace})
+    entry = {'id': agent_id, 'workspace': workspace}
+    if sandbox_mode == "off":
+        entry['sandbox'] = {'mode': 'off'}
+
+    config['agents']['list'].append(entry)
 
     with open(config_file, 'w') as f:
         json.dump(config, f, indent=2)
 
-    print(f"Registered agent '{agent_id}' in openclaw.json")
+    sandbox_note = " (sandbox: off)" if sandbox_mode == "off" else " (sandbox: inherit)"
+    print(f"Registered agent '{agent_id}' in openclaw.json{sandbox_note}")
 except Exception as e:
     print(f"Error: {e}", file=sys.stderr)
     sys.exit(1)
