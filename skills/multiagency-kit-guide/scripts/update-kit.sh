@@ -3,10 +3,14 @@
 # update-kit.sh: Interactive kit updater
 #
 # Updates the kit submodule, re-syncs shared/skills symlinks,
-# commits, and restarts the gateway.
+# syncs workspace-template changes to existing agents, commits,
+# and restarts the gateway.
 #
 # Usage: ./update-kit.sh [version]
 #   version: tag to update to, or "latest" (default: interactive prompt)
+#
+# Options:
+#   --yes, -y    Skip all confirmation prompts (version arg or "latest" required)
 #
 
 set -e
@@ -22,8 +26,23 @@ log_warn()    { echo -e "${YELLOW}⚠${NC} $1"; }
 log_info()    { echo -e "  $1"; }
 log_step()    { echo; echo -e "${CYAN}▶ $1${NC}"; }
 
+YES=false
+POSITIONAL_ARGS=()
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --yes|-y)
+            YES=true; shift ;;
+        -*)
+            echo -e "${RED}✗${NC} Unknown option: $1"; exit 1 ;;
+        *)
+            POSITIONAL_ARGS+=("$1"); shift ;;
+    esac
+done
+
 WORKSPACE_DIR="${WORKSPACE_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/.openclaw/workspace")}"
 KIT_DIR="$WORKSPACE_DIR/kit"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "╔════════════════════════════════════════════════════════╗"
 echo "║  OpenClaw Multi-Agent Kit Updater                      ║"
@@ -50,8 +69,12 @@ echo "Available versions:"
 git tag -l | sort -V | tail -10
 echo
 
-target_version="${1:-}"
+target_version="${POSITIONAL_ARGS[0]:-}"
 if [ -z "$target_version" ]; then
+    if $YES; then
+        echo -e "${RED}✗${NC} --yes requires a version argument (e.g. 'latest' or a tag)"
+        exit 1
+    fi
     read -p "Enter version to update to (or 'latest' for newest): " target_version
 fi
 
@@ -74,13 +97,15 @@ else
     echo "Changes from $current_version to $target_version:"
     git log --oneline "${current_version}..${target_version}" 2>/dev/null || echo "  (will show after checkout)"
 
-    echo
-    read -p "Proceed with update? [y/N] " -n 1 -r
-    echo
+    if ! $YES; then
+        echo
+        read -p "Proceed with update? [y/N] " -n 1 -r
+        echo
 
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Cancelled."
-        exit 0
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Cancelled."
+            exit 0
+        fi
     fi
 
     echo
@@ -146,11 +171,30 @@ if [ "$added" -eq 0 ]; then
     log_success "Shared skills already in sync"
 fi
 
+# ─── Sync workspace-template changes to existing agents ──────────────────
+
+SYNC_SCRIPT="$SCRIPT_DIR/sync-templates.sh"
+if [ -f "$SYNC_SCRIPT" ]; then
+    sync_args=(--old "$current_version" --new "$target_version" --workspace "$WORKSPACE_DIR")
+    $YES && sync_args+=(--yes)
+    bash "$SYNC_SCRIPT" "${sync_args[@]}" || {
+        log_warn "Template sync reported conflicts — resolve before committing"
+    }
+else
+    log_warn "sync-templates.sh not found — skipping template sync"
+fi
+
 # ─── Commit ──────────────────────────────────────────────────────────────
 
 log_step "Committing"
 
 git add kit shared/skills
+# Stage any agent files updated by template sync
+for agent_dir in */; do
+    agent_dir="${agent_dir%/}"
+    case "$agent_dir" in kit|shared|.git|node_modules) continue ;; esac
+    [ -f "$agent_dir/AGENTS.md" ] && git add "$agent_dir"
+done
 
 if git diff --cached --quiet; then
     log_success "Nothing new to commit (already up to date)"
@@ -160,14 +204,19 @@ else
     git status --short
     echo
 
-    read -p "Commit this update? [Y/n] " -n 1 -r
-    echo
+    if $YES; then
+        REPLY="y"
+    else
+        read -p "Commit this update? [Y/n] " -n 1 -r
+        echo
+    fi
 
     if [[ ! $REPLY =~ ^[Nn]$ ]]; then
         git commit -m "[kit] Update to $target_version
 
 - Updated kit submodule
-- Re-synced shared/skills symlinks"
+- Re-synced shared/skills symlinks
+- Synced workspace-template changes to agents"
         log_success "Committed"
     else
         echo "Changes staged but not committed."

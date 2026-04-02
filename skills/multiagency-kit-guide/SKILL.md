@@ -241,9 +241,40 @@ git push origin <version>
 4. **Use shared/skills/ for reference** — But don't commit there, changes go in kit
 5. **Keep agent data in agent dirs** — IDENTITY.md, MEMORY.md, etc. stay with the agent
 
+## Template Sync
+
+When the kit is updated, `workspace-template/` files may have changed (e.g. `AGENTS.md`, `SOUL.md`, `TOOLS.md`). These changes don't automatically reach existing agents — their copies were made at creation time.
+
+`update-kit.sh` now runs `sync-templates.sh` automatically during updates. It uses three-way merge to propagate template changes while preserving agent customizations:
+
+- **Agent unchanged, template changed** — fast-forwarded automatically
+- **Agent customized, template changed** — merged; conflicts marked with `<<<<<<<` if unresolvable
+- **New template file** — copied into agents that lack it
+- **Deleted template file** — warning only, not removed
+
+Files excluded from sync (fully agent-owned): `IDENTITY.md`, `USER.md`, `MEMORY.md`.
+
+Each agent stores its template baseline in `.template-version`. New agents get this stamped automatically by `add-agent.sh`.
+
+To run template sync manually (e.g. outside of a full kit update):
+
+```bash
+{baseDir}/scripts/sync-templates.sh --old v0.3.0 --new v0.3.1 --workspace /path/to/workspace
+```
+
+Use `--dry-run` to preview changes without modifying files.
+
+## Important: Detached HEAD Is Normal
+
+The `kit/` submodule is pinned to a release tag, which means `git status` inside `kit/` will show "HEAD detached at vX.Y.Z". This is correct and expected.
+
+**Do not** run `cd kit && git pull` — it will fail on a detached HEAD. Always use `update-kit.sh` to update the kit version.
+
 ## Helper Scripts
 
 Scripts are in `{baseDir}/scripts/`:
 
-- `update-kit.sh` — Interactive kit updater
+- `update-kit.sh` — Interactive kit updater (supports `--yes` for non-interactive use)
+- `sync-templates.sh` — Sync workspace-template changes to existing agents
+- `check-kit-version.sh` — Check if kit is up to date
 - `check-setup.sh` — Verify workspace health

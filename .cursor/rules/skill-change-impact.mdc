@@ -27,9 +27,11 @@ Changes to skills, workspace-template, or scripts can break other parts of the k
 
 ## Modifying workspace-template Files
 
-1. **Existing agents are NOT auto-updated** — Template changes only affect new agents created via `setup.sh` or `add-agent.sh`. Document migration steps or add logic to `update-kit.sh` for existing agents.
+1. **Existing agents ARE synced on kit update** — `update-kit.sh` calls `sync-templates.sh`, which uses three-way merge to propagate template changes to existing agents. Files in the exclude list (`IDENTITY.md`, `USER.md`, `MEMORY.md`) are never synced. If your change affects an excluded file, document manual migration steps.
 
 2. **BOOT.md paths** — If BOOT.md references skill paths (e.g., `shared/skills/<name>/SKILL.md`), verify those symlinks exist in the setup/migrate symlink loops.
+
+3. **Template version tracking** — Each agent has `.template-version` recording which kit version its templates came from. `sync-templates.sh` uses this for per-agent three-way merge baselines. `add-agent.sh` stamps it at creation time.
 
 ## Modifying Any Script
 

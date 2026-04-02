@@ -628,6 +628,280 @@ if should_run "migrate_shared_skills_set"; then
     teardown_env
 fi
 
+# ─── sync-templates.sh tests ──────────────────────────────────────────────────
+
+SYNC_SH="$REPO_ROOT/skills/multiagency-kit-guide/scripts/sync-templates.sh"
+
+# Create a fake kit repo with two tagged versions that differ in workspace-template.
+# Sets KIT_REPO to the path and creates tags v0.1.0 and v0.2.0.
+setup_kit_repo() {
+    KIT_REPO="$TMP_HOME/kit-repo"
+    mkdir -p "$KIT_REPO"
+    git -C "$KIT_REPO" init -q
+
+    git -C "$KIT_REPO" config user.name "Test"
+    git -C "$KIT_REPO" config user.email "test@test.com"
+
+    # v0.1.0: initial workspace-template
+    mkdir -p "$KIT_REPO/workspace-template/threads"
+    printf "# AGENTS v1\nOriginal agents content.\n" > "$KIT_REPO/workspace-template/AGENTS.md"
+    printf "# SOUL v1\nOriginal soul.\n"              > "$KIT_REPO/workspace-template/SOUL.md"
+    printf "# TOOLS v1\nOriginal tools.\n"             > "$KIT_REPO/workspace-template/TOOLS.md"
+    printf "# IDENTITY v1\n"                           > "$KIT_REPO/workspace-template/IDENTITY.md"
+    printf "# USER v1\n"                               > "$KIT_REPO/workspace-template/USER.md"
+    printf "# MEMORY v1\n"                             > "$KIT_REPO/workspace-template/MEMORY.md"
+    printf "# Threads README\n"                        > "$KIT_REPO/workspace-template/threads/README.md"
+    git -C "$KIT_REPO" add -A
+    git -C "$KIT_REPO" commit -q -m "v0.1.0"
+    git -C "$KIT_REPO" tag v0.1.0
+
+    # v0.2.0: change AGENTS.md and SOUL.md, add HEARTBEAT.md, change IDENTITY.md (excluded)
+    printf "# AGENTS v2\nUpdated agents content.\nNew section added.\n" > "$KIT_REPO/workspace-template/AGENTS.md"
+    printf "# SOUL v2\nUpdated soul with new guidance.\n"               > "$KIT_REPO/workspace-template/SOUL.md"
+    printf "# HEARTBEAT v2\nNew heartbeat file.\n"                      > "$KIT_REPO/workspace-template/HEARTBEAT.md"
+    printf "# IDENTITY v2\nUpdated identity.\n"                         > "$KIT_REPO/workspace-template/IDENTITY.md"
+    git -C "$KIT_REPO" add -A
+    git -C "$KIT_REPO" commit -q -m "v0.2.0"
+    git -C "$KIT_REPO" tag v0.2.0
+}
+
+# Set up a workspace with a kit clone and agent directories.
+setup_sync_workspace() {
+    local ws="$1"
+    mkdir -p "$ws"
+    git -C "$ws" init -q
+    git -C "$ws" config user.name "Test"
+    git -C "$ws" config user.email "test@test.com"
+
+    # Clone the kit repo as a subdir (simulating submodule)
+    git clone -q "$KIT_REPO" "$ws/kit"
+    git -C "$ws/kit" checkout -q v0.1.0
+
+    echo "v0.1.0" > "$ws/.kit-version"
+}
+
+# Create an agent by copying the v0.1.0 template
+setup_sync_agent() {
+    local ws="$1" name="$2"
+    cp -r "$ws/kit/workspace-template" "$ws/$name"
+    echo "v0.1.0" > "$ws/$name/.template-version"
+}
+
+run_sync() {
+    local ws="$1"; shift
+    set +e
+    OUT=$(
+        bash "$SYNC_SH" --workspace "$ws" "$@" < /dev/null 2>&1
+    )
+    RC=$?
+    set -e
+}
+
+section "sync-templates.sh — argument validation"
+
+if should_run "sync_missing_new_version"; then
+    setup_env
+    run_sync "$TMP_HOME" --old v0.1.0
+    if [ "$RC" -ne 0 ] && out_contains "--new VERSION is required"; then
+        pass "sync_missing_new_version: exits non-zero with clear message"
+    else
+        fail "sync_missing_new_version: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+if should_run "sync_unknown_flag"; then
+    setup_env
+    run_sync "$TMP_HOME" --bogus
+    if [ "$RC" -ne 0 ] && out_contains "Unknown option"; then
+        pass "sync_unknown_flag: exits non-zero with 'Unknown option'"
+    else
+        fail "sync_unknown_flag: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+section "sync-templates.sh — no changes"
+
+if should_run "sync_same_version"; then
+    setup_env
+    setup_kit_repo
+    SYNC_WS="$TMP_HOME/ws-same"
+    setup_sync_workspace "$SYNC_WS"
+    run_sync "$SYNC_WS" --old v0.1.0 --new v0.1.0
+    if [ "$RC" -eq 0 ] && out_contains "same"; then
+        pass "sync_same_version: exits 0 when old == new"
+    else
+        fail "sync_same_version: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+section "sync-templates.sh — dry run"
+
+if should_run "sync_dry_run_no_changes"; then
+    setup_env
+    setup_kit_repo
+    SYNC_WS="$TMP_HOME/ws-dry"
+    setup_sync_workspace "$SYNC_WS"
+    setup_sync_agent "$SYNC_WS" "testagent"
+    run_sync "$SYNC_WS" --old v0.1.0 --new v0.2.0 --dry-run
+    if [ "$RC" -eq 0 ] && out_contains "DRY RUN"; then
+        pass "sync_dry_run: shows DRY RUN banner"
+    else
+        fail "sync_dry_run: RC=$RC, output: $OUT"
+    fi
+    # Verify no files were actually modified
+    local_agents_content=$(cat "$SYNC_WS/testagent/AGENTS.md")
+    if [[ "$local_agents_content" == *"v1"* ]]; then
+        pass "sync_dry_run: agent files unchanged"
+    else
+        fail "sync_dry_run: agent files were modified during dry run"
+    fi
+    teardown_env
+fi
+
+section "sync-templates.sh — fast-forward"
+
+if should_run "sync_fast_forward"; then
+    setup_env
+    setup_kit_repo
+    SYNC_WS="$TMP_HOME/ws-ff"
+    setup_sync_workspace "$SYNC_WS"
+    setup_sync_agent "$SYNC_WS" "testagent"
+    # Agent has unmodified v0.1.0 templates — should fast-forward
+    run_sync "$SYNC_WS" --old v0.1.0 --new v0.2.0
+    if [ "$RC" -eq 0 ]; then
+        pass "sync_fast_forward: exits 0"
+    else
+        fail "sync_fast_forward: RC=$RC, output: $OUT"
+    fi
+    # AGENTS.md should now have v2 content
+    if grep -q "v2" "$SYNC_WS/testagent/AGENTS.md"; then
+        pass "sync_fast_forward: AGENTS.md updated to v2"
+    else
+        fail "sync_fast_forward: AGENTS.md not updated"
+    fi
+    # SOUL.md should also be updated
+    if grep -q "v2" "$SYNC_WS/testagent/SOUL.md"; then
+        pass "sync_fast_forward: SOUL.md updated to v2"
+    else
+        fail "sync_fast_forward: SOUL.md not updated"
+    fi
+    teardown_env
+fi
+
+section "sync-templates.sh — new template files"
+
+if should_run "sync_new_file_created"; then
+    setup_env
+    setup_kit_repo
+    SYNC_WS="$TMP_HOME/ws-new"
+    setup_sync_workspace "$SYNC_WS"
+    setup_sync_agent "$SYNC_WS" "testagent"
+    # HEARTBEAT.md is new in v0.2.0 and doesn't exist in agent
+    rm -f "$SYNC_WS/testagent/HEARTBEAT.md"
+    run_sync "$SYNC_WS" --old v0.1.0 --new v0.2.0
+    if [ -f "$SYNC_WS/testagent/HEARTBEAT.md" ] && grep -q "v2" "$SYNC_WS/testagent/HEARTBEAT.md"; then
+        pass "sync_new_file_created: HEARTBEAT.md created in agent"
+    else
+        fail "sync_new_file_created: HEARTBEAT.md not created"
+    fi
+    teardown_env
+fi
+
+section "sync-templates.sh — excluded files"
+
+if should_run "sync_excludes_identity"; then
+    setup_env
+    setup_kit_repo
+    SYNC_WS="$TMP_HOME/ws-excl"
+    setup_sync_workspace "$SYNC_WS"
+    setup_sync_agent "$SYNC_WS" "testagent"
+    run_sync "$SYNC_WS" --old v0.1.0 --new v0.2.0
+    # IDENTITY.md changed in v0.2.0 but should be excluded from sync
+    if grep -q "v1" "$SYNC_WS/testagent/IDENTITY.md"; then
+        pass "sync_excludes_identity: IDENTITY.md untouched (excluded)"
+    else
+        fail "sync_excludes_identity: IDENTITY.md was modified despite being excluded"
+    fi
+    teardown_env
+fi
+
+section "sync-templates.sh — three-way merge"
+
+if should_run "sync_merge_customized"; then
+    setup_env
+    setup_kit_repo
+    SYNC_WS="$TMP_HOME/ws-merge"
+    setup_sync_workspace "$SYNC_WS"
+    setup_sync_agent "$SYNC_WS" "testagent"
+    # Customize TOOLS.md (not changed in v0.2.0 template, so no merge needed)
+    # Instead customize AGENTS.md which IS changed in v0.2.0
+    printf "# AGENTS v1\nOriginal agents content.\nMy custom agent note.\n" > "$SYNC_WS/testagent/AGENTS.md"
+    run_sync "$SYNC_WS" --old v0.1.0 --new v0.2.0
+    # Should merge: agent's custom note + template's new section
+    if grep -q "custom agent note" "$SYNC_WS/testagent/AGENTS.md" && grep -q "New section" "$SYNC_WS/testagent/AGENTS.md"; then
+        pass "sync_merge_customized: three-way merge preserves both changes"
+    else
+        fail "sync_merge_customized: merge did not preserve both changes"
+        echo "  content: $(cat "$SYNC_WS/testagent/AGENTS.md")"
+    fi
+    teardown_env
+fi
+
+section "sync-templates.sh — template version stamp"
+
+if should_run "sync_stamps_template_version"; then
+    setup_env
+    setup_kit_repo
+    SYNC_WS="$TMP_HOME/ws-stamp"
+    setup_sync_workspace "$SYNC_WS"
+    setup_sync_agent "$SYNC_WS" "testagent"
+    run_sync "$SYNC_WS" --old v0.1.0 --new v0.2.0
+    if [ -f "$SYNC_WS/testagent/.template-version" ] && grep -q "v0.2.0" "$SYNC_WS/testagent/.template-version"; then
+        pass "sync_stamps_template_version: .template-version updated to v0.2.0"
+    else
+        fail "sync_stamps_template_version: .template-version not updated"
+    fi
+    teardown_env
+fi
+
+section "sync-templates.sh — .kit-version fallback"
+
+if should_run "sync_kit_version_fallback"; then
+    setup_env
+    setup_kit_repo
+    SYNC_WS="$TMP_HOME/ws-fallback"
+    setup_sync_workspace "$SYNC_WS"
+    setup_sync_agent "$SYNC_WS" "testagent"
+    # Don't pass --old, should fall back to .kit-version (v0.1.0)
+    run_sync "$SYNC_WS" --new v0.2.0
+    if [ "$RC" -eq 0 ] && out_contains ".kit-version"; then
+        pass "sync_kit_version_fallback: falls back to .kit-version"
+    else
+        fail "sync_kit_version_fallback: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
+section "sync-templates.sh — no agents"
+
+if should_run "sync_no_agents"; then
+    setup_env
+    setup_kit_repo
+    SYNC_WS="$TMP_HOME/ws-noagent"
+    setup_sync_workspace "$SYNC_WS"
+    # No agent dirs created
+    run_sync "$SYNC_WS" --old v0.1.0 --new v0.2.0
+    if [ "$RC" -eq 0 ] && out_contains "No agent workspaces found"; then
+        pass "sync_no_agents: exits 0 with warning"
+    else
+        fail "sync_no_agents: RC=$RC, output: $OUT"
+    fi
+    teardown_env
+fi
+
 # ─── Summary ──────────────────────────────────────────────────────────────────
 
 echo

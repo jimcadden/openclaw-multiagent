@@ -111,6 +111,18 @@ create_agent() {
     fi
 
     cp -r "$KIT_DIR/workspace-template" "$WORKSPACE_DIR/$AGENT_NAME"
+
+    # Record which kit version this agent's template files came from
+    local kit_version=""
+    if [ -f "$WORKSPACE_DIR/.kit-version" ]; then
+        kit_version="$(cat "$WORKSPACE_DIR/.kit-version")"
+    else
+        kit_version="$(cd "$KIT_DIR" && git describe --tags 2>/dev/null || git -C "$KIT_DIR" rev-parse --short HEAD)"
+    fi
+    if [ -n "$kit_version" ]; then
+        echo "$kit_version" > "$WORKSPACE_DIR/$AGENT_NAME/.template-version"
+    fi
+
     log_success "Agent workspace created at $WORKSPACE_DIR/$AGENT_NAME"
 }
 
