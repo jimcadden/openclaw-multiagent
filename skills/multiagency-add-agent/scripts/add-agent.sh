@@ -223,9 +223,9 @@ setup_telegram() {
         return 0
     fi
 
-    local telegram_script="$KIT_DIR/skills/multiagency-telegram-setup/scripts/setup-telegram-agent.py"
+    local telegram_script="$KIT_DIR/skills/multiagency-telegram-setup/scripts/setup-telegram-agent.sh"
     if [ -f "$telegram_script" ]; then
-        python3 "$telegram_script" --agent "$AGENT_NAME"
+        bash "$telegram_script" --agent "$AGENT_NAME"
     else
         log_warn "Telegram setup script not found at $telegram_script"
     fi

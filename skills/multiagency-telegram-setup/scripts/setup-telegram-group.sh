@@ -180,7 +180,7 @@ BOUND_ACCOUNTS=$(echo "$ACCOUNT_INFO" | grep "^BOUND:" | sed 's/^BOUND://')
 
 if [ -z "$ALL_ACCOUNTS" ]; then
     log_error "No Telegram accounts found in channels.telegram.accounts"
-    log_info "Set up a Telegram bot first with setup-telegram-agent.py"
+    log_info "Set up a Telegram bot first with setup-telegram-agent.sh"
     exit 1
 fi
 

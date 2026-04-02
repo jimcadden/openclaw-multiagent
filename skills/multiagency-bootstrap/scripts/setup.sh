@@ -409,14 +409,14 @@ prompt_telegram() {
 
     if [[ "$reply" =~ ^[Yy]$ ]]; then
         log_info "Running Telegram setup..."
-        if [ -f "$KIT_DIR/skills/multiagency-telegram-setup/scripts/setup-telegram-agent.py" ]; then
-            python3 "$KIT_DIR/skills/multiagency-telegram-setup/scripts/setup-telegram-agent.py" --agent "$AGENT_NAME"
+        if [ -f "$KIT_DIR/skills/multiagency-telegram-setup/scripts/setup-telegram-agent.sh" ]; then
+            bash "$KIT_DIR/skills/multiagency-telegram-setup/scripts/setup-telegram-agent.sh" --agent "$AGENT_NAME"
         else
             log_warn "Telegram setup script not found"
         fi
     else
         log_info "Skipped. Run later with:"
-        log_info "  python3 $KIT_DIR/skills/multiagency-telegram-setup/scripts/setup-telegram-agent.py --agent $AGENT_NAME"
+        log_info "  $KIT_DIR/skills/multiagency-telegram-setup/scripts/setup-telegram-agent.sh --agent $AGENT_NAME"
     fi
 }
 

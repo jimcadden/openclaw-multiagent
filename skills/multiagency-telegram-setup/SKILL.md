@@ -41,7 +41,7 @@ All new agents are created in the workspace root with shared skills and a standa
 Run the interactive setup:
 
 ```bash
-python3 {baseDir}/scripts/setup-telegram-agent.py
+{baseDir}/scripts/setup-telegram-agent.sh
 ```
 
 This will:

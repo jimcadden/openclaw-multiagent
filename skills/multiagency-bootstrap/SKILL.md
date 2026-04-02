@@ -175,4 +175,4 @@ git commit -m "[kit] Add openclaw-multiagency kit"
 1. Verify the workspace: `bash kit/skills/multiagency-kit-guide/scripts/check-setup.sh`
 2. Restart OpenClaw: `openclaw gateway restart`
 3. Verify agent loads: `openclaw status`
-4. Set up Telegram (if not done): `python3 kit/skills/multiagency-telegram-setup/scripts/setup-telegram-agent.py`
+4. Set up Telegram (if not done): `kit/skills/multiagency-telegram-setup/scripts/setup-telegram-agent.sh`
